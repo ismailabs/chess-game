@@ -1,0 +1,2289 @@
+The full project is below. I have no network or Node runtime here, so I have not run `npm install`, `typecheck`, `test` or `build`, and I have not run the SQL or deployed the function. Run `npm run typecheck && npm test` before you push.
+
+Two things differ from your spec:
+- **Stockfish version:** the newest Stockfish.js build I could confirm is **Stockfish 18** (`stockfish-18-lite-single`). I could not confirm a "19" build. The copy script finds the `lite-single` JS and WASM in whatever version you install, and the UI shows the real installed version.
+- **react-chessboard:** this uses the v5 `options` API. Everything that touches the library is in `src/components/Board.tsx`, so that is the only file to adjust if your installed minor version differs.
+
+```
+chess-game/
+├─ .env.example  .gitignore  README.md  index.html  vercel.json
+├─ vite.config.ts  tsconfig.json  package.json (replace "scripts" only)
+├─ scripts/copy-stockfish.mjs
+├─ supabase/
+│  ├─ config.toml
+│  ├─ migrations/0001_chess.sql
+│  └─ functions/game-action/{index.ts, rules.ts, deno.json}
+├─ tests/rules.test.ts
+└─ src/
+   ├─ main.tsx  index.css  App.tsx
+   ├─ lib/{supabase.ts, api.ts, auth.tsx, router.tsx, engine.ts, format.ts, types.ts}
+   ├─ hooks/{useGame.ts, useAiPlayer.ts}
+   ├─ components/{Board.tsx, GameView.tsx, MovesPanel.tsx, ui.tsx}
+   └─ pages/{Online.tsx, Computer.tsx, History.tsx}
+```
+
+Delete the template leftovers: `src/App.css`, `src/assets/`, `public/vite.svg`, `tsconfig.app.json`, `tsconfig.node.json`, `eslint.config.js`.
+
+---
+
+### `package.json` (keep what `npm install` generated; replace only `scripts`)
+```json
+"scripts": {
+  "predev": "node scripts/copy-stockfish.mjs",
+  "dev": "vite",
+  "prebuild": "node scripts/copy-stockfish.mjs",
+  "build": "vite build",
+  "preview": "vite preview",
+  "typecheck": "tsc --noEmit",
+  "test": "vitest run"
+}
+```
+
+### `.env.example`
+```
+VITE_SUPABASE_URL=https://fhlpgtkftfhqcgppfnud.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ssmEUYRTVzzZYcLS4eRlOQ_Xin6fLlG
+```
+
+### `.gitignore`
+```
+node_modules
+dist
+.env
+.env.local
+.vercel
+public/engine
+supabase/.temp
+*.log
+```
+
+### `vercel.json`
+```json
+{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
+```
+
+### `vite.config.ts`
+```ts
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  test: { environment: "node", include: ["tests/**/*.test.ts"] },
+});
+```
+
+### `tsconfig.json`
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "types": ["vite/client"]
+  },
+  "include": ["src", "tests", "vite.config.ts", "supabase/functions/game-action/rules.ts"]
+}
+```
+
+### `index.html`
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f5f2ea" />
+    <title>Chess</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+```
+
+### `scripts/copy-stockfish.mjs`
+```js
+// Copies the real Stockfish.js lite single-threaded WASM build from node_modules into public/engine
+// and writes a manifest listing only what is actually bundled.
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const pkgDir = join("node_modules", "stockfish");
+if (!existsSync(pkgDir)) {
+  console.error("The 'stockfish' package is not installed. Run: npm install");
+  process.exit(1);
+}
+const pkg = JSON.parse(readFileSync(join(pkgDir, "package.json"), "utf8"));
+
+let found = null;
+for (const dir of ["bin", "src", "."].map((d) => join(pkgDir, d)).filter(existsSync)) {
+  const files = readdirSync(dir);
+  const js = files
+    .filter((f) => /lite-single.*\.js$/.test(f) && files.includes(f.replace(/\.js$/, ".wasm")))
+    .sort()[0];
+  if (js) { found = { dir, js }; break; }
+}
+if (!found) {
+  console.error("No lite-single JS+WASM pair found in node_modules/stockfish (looked in bin/, src/, root).");
+  process.exit(1);
+}
+
+const out = join("public", "engine");
+rmSync(out, { recursive: true, force: true });
+mkdirSync(out, { recursive: true });
+const wasm = found.js.replace(/\.js$/, ".wasm");
+cpSync(join(found.dir, found.js), join(out, found.js));
+cpSync(join(found.dir, wasm), join(out, wasm));
+for (const name of ["COPYING.txt", "Copying.txt", "COPYING", "LICENSE", "LICENSE.txt"]) {
+  if (existsSync(join(pkgDir, name))) { cpSync(join(pkgDir, name), join(out, "COPYING.txt")); break; }
+}
+
+const fromName = /stockfish[a-z-]*?-?(\d+(?:\.\d+)?)/i.exec(found.js)?.[1];
+const version = fromName ?? pkg.version;
+writeFileSync(
+  join(out, "manifest.json"),
+  JSON.stringify([{
+    id: "stockfish-lite",
+    name: `Stockfish ${version} Lite (single-threaded WASM)`,
+    version, js: found.js, wasm, license: "GPL-3.0-or-later",
+    source: "https://github.com/official-stockfish/Stockfish",
+    build: "https://github.com/nmrugg/stockfish.js",
+  }], null, 2),
+);
+console.log(`Bundled ${found.js} (+ .wasm) -> public/engine`);
+```
+
+---
+
+## Shared rules (used by the Edge Function, the frontend and the tests)
+
+### `supabase/functions/game-action/rules.ts`
+```ts
+import { Chess } from "chess.js";
+import type { Move } from "chess.js";
+
+export const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+export type Side = "w" | "b";
+export type Result = "1-0" | "0-1" | "1/2-1/2";
+export type Termination =
+  | "checkmate" | "stalemate" | "insufficient_material" | "fivefold_repetition" | "seventyfive_move"
+  | "threefold_repetition" | "fifty_move" | "timeout" | "resignation" | "agreement";
+export interface Outcome { result: Result; termination: Termination }
+
+export const TIME_CONTROLS = [
+  { id: "1+0", initial: 60_000, increment: 0, kind: "Bullet" },
+  { id: "2+1", initial: 120_000, increment: 1_000, kind: "Bullet" },
+  { id: "3+2", initial: 180_000, increment: 2_000, kind: "Blitz" },
+  { id: "5+0", initial: 300_000, increment: 0, kind: "Blitz" },
+  { id: "10+0", initial: 600_000, increment: 0, kind: "Rapid" },
+  { id: "10+5", initial: 600_000, increment: 5_000, kind: "Rapid" },
+] as const;
+export const findTimeControl = (id: unknown) => TIME_CONTROLS.find((t) => t.id === id);
+
+export const AI_LEVELS = [
+  { id: 1, label: "Beginner", elo: 1320, skill: 1 },
+  { id: 2, label: "Casual", elo: 1600, skill: 5 },
+  { id: 3, label: "Club", elo: 1900, skill: 9 },
+  { id: 4, label: "Strong", elo: 2200, skill: 13 },
+  { id: 5, label: "Expert", elo: 2600, skill: 17 },
+  { id: 6, label: "Maximum", elo: null, skill: 20 },
+] as const;
+
+export const UCI_RE = /^[a-h][1-8][a-h][1-8][qrbn]?$/;
+export const positionKey = (fen: string) => fen.split(" ").slice(0, 4).join(" ");
+const halfmove = (c: Chess) => Number(c.fen().split(" ")[4]);
+
+export function applyUci(chess: Chess, uci: string): Move {
+  if (!UCI_RE.test(uci)) throw new Error("Malformed move");
+  return chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
+}
+
+/** Replays a game from the start; keys[i] is the repetition key after ply i (keys[0] = start). */
+export function replay(ucis: string[]) {
+  const chess = new Chess();
+  const keys = [positionKey(chess.fen())];
+  for (const u of ucis) { applyUci(chess, u); keys.push(positionKey(chess.fen())); }
+  return { chess, keys };
+}
+
+const repCount = (keys: string[]) => keys.filter((k) => k === keys[keys.length - 1]).length;
+const draw = (termination: Termination): Outcome => ({ result: "1/2-1/2", termination });
+
+/** Endings that happen automatically (no claim needed). Checkmate always takes precedence. */
+export function automaticOutcome(chess: Chess, keys: string[] = [positionKey(chess.fen())]): Outcome | null {
+  if (chess.isCheckmate()) {
+    return { result: chess.turn() === "w" ? "0-1" : "1-0", termination: "checkmate" };
+  }
+  if (chess.isStalemate()) return draw("stalemate");
+  if (chess.isInsufficientMaterial()) return draw("insufficient_material");
+  if (repCount(keys) >= 5) return draw("fivefold_repetition");
+  if (halfmove(chess) >= 150) return draw("seventyfive_move");
+  return null;
+}
+
+/** Draws a player may claim (threefold repetition, 50-move rule). Not automatic. */
+export function claimableDraw(chess: Chess, keys: string[] = [positionKey(chess.fen())]): Outcome | null {
+  if (repCount(keys) >= 3) return draw("threefold_repetition");
+  if (halfmove(chess) >= 100) return draw("fifty_move");
+  return null;
+}
+
+/** Can `side` still checkmate with the material on the board (so a flag fall is a real win)? */
+export function hasMatingMaterial(chess: Chess, side: Side): boolean {
+  let strong = false, knights = 0, light = 0, dark = 0, oppPieces = 0, oppNP = 0;
+  chess.board().forEach((row, r) => row.forEach((cell, c) => {
+    if (!cell) return;
+    if (cell.color === side) {
+      if (cell.type === "p" || cell.type === "r" || cell.type === "q") strong = true;
+      else if (cell.type === "n") knights++;
+      else if (cell.type === "b") ((r + c) % 2 === 0 ? light++ : dark++);
+    } else if (cell.type !== "k") {
+      oppPieces++;
+      if (cell.type === "n" || cell.type === "p") oppNP++;
+    }
+  }));
+  if (strong || (light > 0 && dark > 0) || knights >= 2 || (knights >= 1 && light + dark >= 1)) return true;
+  if (knights === 1) return oppPieces > 0;
+  if (light + dark > 0) return oppNP > 0;
+  return false;
+}
+
+export function timeoutOutcome(chess: Chess, flagged: Side): Outcome {
+  const winner: Side = flagged === "w" ? "b" : "w";
+  if (!hasMatingMaterial(chess, winner)) return draw("timeout");
+  return { result: winner === "w" ? "1-0" : "0-1", termination: "timeout" };
+}
+
+export interface ClockState {
+  white_ms: number; black_ms: number; increment_ms: number;
+  turn: Side; turn_started_at: string | null; ply: number; status: string;
+}
+export const clockRunning = (g: Pick<ClockState, "status" | "ply" | "turn_started_at">) =>
+  g.status === "active" && g.ply >= 2 && !!g.turn_started_at;
+
+/** Visible remaining time for both sides at `nowMs` (client display; nothing is written per second). */
+export function remainingAt(g: ClockState, nowMs: number) {
+  let w = g.white_ms, b = g.black_ms;
+  if (clockRunning(g)) {
+    const el = Math.max(0, nowMs - Date.parse(g.turn_started_at!));
+    if (g.turn === "w") w = Math.max(0, w - el); else b = Math.max(0, b - el);
+  }
+  return { w, b };
+}
+
+/** Server-side clock update for a move made now. Clocks start after each side's first move; no increment on those. */
+export function clockAfterMove(g: ClockState, nowMs: number) {
+  const running = g.ply >= 2 && !!g.turn_started_at;
+  const elapsed = running ? Math.max(0, nowMs - Date.parse(g.turn_started_at!)) : 0;
+  const key = g.turn === "w" ? "white_ms" : "black_ms";
+  const left = g[key] - elapsed;
+  const out = { white_ms: g.white_ms, black_ms: g.black_ms, flagged: false };
+  if (left <= 0) { out[key] = 0; out.flagged = true; return out; }
+  out[key] = left + (running ? g.increment_ms : 0);
+  return out;
+}
+
+export function buildPgn(
+  ucis: string[],
+  m: { white: string; black: string; result: Result | "*"; tc: string; initial: number; inc: number; date: string; mode: string },
+): string {
+  const c = new Chess();
+  for (const u of ucis) applyUci(c, u);
+  c.setHeader("Event", m.mode === "ai" ? "Computer game" : "Online game");
+  c.setHeader("Site", "Chess");
+  c.setHeader("Date", m.date.slice(0, 10).replace(/-/g, "."));
+  c.setHeader("White", m.white);
+  c.setHeader("Black", m.black);
+  c.setHeader("Result", m.result);
+  c.setHeader("TimeControl", `${m.initial / 1000}+${m.inc / 1000}`);
+  return c.pgn();
+}
+```
+
+### `supabase/functions/game-action/deno.json`
+```json
+{
+  "imports": {
+    "chess.js": "npm:chess.js@^1.4.0",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2"
+  }
+}
+```
+
+### `supabase/config.toml`
+```toml
+project_id = "fhlpgtkftfhqcgppfnud"
+
+[functions.game-action]
+verify_jwt = false
+```
+
+### `supabase/functions/game-action/index.ts`
+```ts
+// Single trusted endpoint. Authenticates the caller, validates everything with chess.js, and commits via
+// compare-and-swap on `revision`. The browser never writes game state directly.
+import { createClient } from "@supabase/supabase-js";
+import {
+  AI_LEVELS, applyUci, automaticOutcome, buildPgn, claimableDraw, clockAfterMove, findTimeControl,
+  positionKey, replay, timeoutOutcome, UCI_RE, type Outcome, type Side,
+} from "./rules.ts";
+
+type Row = Record<string, any>;
+
+const admin = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SERVICE_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  { auth: { persistSession: false, autoRefreshToken: false } },
+);
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
+
+class HttpError extends Error {
+  constructor(public status: number, message: string, public code?: string) { super(message); }
+}
+
+const displayName = (u: any) =>
+  String(u.user_metadata?.full_name ?? u.user_metadata?.name ?? u.email?.split("@")[0] ?? "Player").slice(0, 40);
+const avatarOf = (u: any) => {
+  const a = u.user_metadata?.avatar_url ?? u.user_metadata?.picture;
+  return typeof a === "string" && a.startsWith("https://") ? a.slice(0, 500) : null;
+};
+
+async function getGame(id: unknown): Promise<Row> {
+  if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) throw new HttpError(400, "Bad game id");
+  const { data, error } = await admin.from("games").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  if (!data) throw new HttpError(404, "Game not found");
+  return data;
+}
+function mySide(g: Row, uid: string): Side {
+  if (g.white_id === uid) return "w";
+  if (g.black_id === uid) return "b";
+  throw new HttpError(403, "Not your game");
+}
+async function fetchMoves(id: string): Promise<Row[]> {
+  const out: Row[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin.from("game_moves").select("*").eq("game_id", id).order("ply").range(from, from + 999);
+    if (error) throw error;
+    out.push(...data);
+    if (data.length < 1000) break;
+  }
+  return out;
+}
+async function ucisOf(g: Row): Promise<string[]> {
+  const ucis = (await fetchMoves(g.id)).map((m) => m.uci as string);
+  if (ucis.length !== g.ply) throw new HttpError(409, "Game is out of sync, try again", "stale");
+  return ucis;
+}
+
+function finishPatch(g: Row, ucis: string[], out: Outcome, extra: Row = {}): Row {
+  return {
+    status: "finished", result: out.result, termination: out.termination, ended_at: new Date().toISOString(),
+    draw_offer_by: null,
+    pgn: buildPgn(ucis, {
+      white: g.white_name ?? "White", black: g.black_name ?? "Black", result: out.result, tc: g.tc,
+      initial: g.initial_ms, inc: g.increment_ms, date: g.created_at, mode: g.mode,
+    }),
+    ...extra,
+  };
+}
+
+async function casUpdate(g: Row, patch: Row): Promise<Row | null> {
+  const { data, error } = await admin.from("games")
+    .update({ ...patch, revision: g.revision + 1, updated_at: new Date().toISOString() })
+    .eq("id", g.id).eq("revision", g.revision).eq("status", "active")
+    .select().maybeSingle();
+  if (error) throw error;
+  return data;
+}
+async function mutate(gameId: unknown, uid: string, fn: (g: Row, me: Side) => Promise<Row> | Row): Promise<Row> {
+  for (let i = 0; i < 4; i++) {
+    const g = await getGame(gameId);
+    const me = mySide(g, uid);
+    if (g.status !== "active") throw new HttpError(409, "Game is not active", "not_active");
+    const row = await casUpdate(g, await fn(g, me));
+    if (row) return row;
+  }
+  throw new HttpError(409, "The game changed, please retry", "stale");
+}
+
+async function doMove(user: any, b: Row): Promise<Row> {
+  const g = await getGame(b.gameId);
+  const me = mySide(g, user.id);
+  if (g.status !== "active") throw new HttpError(409, "Game is over", "not_active");
+  const asAi = b.ai === true;
+  if (asAi && g.mode !== "ai") throw new HttpError(400, "Not an engine game");
+  const mover: Side = asAi ? g.ai_color : me;
+  if (!asAi && g.mode === "ai" && mover === g.ai_color) throw new HttpError(403, "Not your side");
+  if (g.turn !== mover) throw new HttpError(409, "It is not your turn", "not_your_turn");
+  if (b.expectedRevision !== g.revision) throw new HttpError(409, "Position changed, reloading", "stale");
+
+  const ucis = await ucisOf(g);
+  const { chess, keys } = replay(ucis);
+  const clk = clockAfterMove(g as any, Date.now());
+  if (clk.flagged) {
+    const out = timeoutOutcome(chess, mover);
+    const row = await casUpdate(g, finishPatch(g, ucis, out, { [mover === "w" ? "white_ms" : "black_ms"]: 0 }));
+    if (!row) throw new HttpError(409, "Position changed, reloading", "stale");
+    return { game: row, flagged: true };
+  }
+  if (typeof b.uci !== "string" || !UCI_RE.test(b.uci)) throw new HttpError(400, "Malformed move");
+  let mv;
+  try { mv = applyUci(chess, b.uci); } catch { throw new HttpError(400, "Illegal move", "illegal"); }
+  const uci = `${mv.from}${mv.to}${mv.promotion ?? ""}`;
+  keys.push(positionKey(chess.fen()));
+  const out = automaticOutcome(chess, keys);
+  const pgn = buildPgn([...ucis, uci], {
+    white: g.white_name ?? "White", black: g.black_name ?? "Black", result: out?.result ?? "*", tc: g.tc,
+    initial: g.initial_ms, inc: g.increment_ms, date: g.created_at, mode: g.mode,
+  });
+  const fen = chess.fen();
+  const { data, error } = await admin.rpc("commit_move", {
+    p_game: g.id, p_expected_rev: g.revision, p_ply: g.ply + 1, p_player: asAi ? null : user.id,
+    p_san: mv.san, p_uci: uci, p_fen: fen, p_pgn: pgn, p_white_ms: clk.white_ms, p_black_ms: clk.black_ms,
+    p_turn: chess.turn(), p_result: out?.result ?? null, p_termination: out?.termination ?? null,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new HttpError(409, "Position changed, reloading", "stale");
+  return {
+    game: row,
+    move: { game_id: g.id, ply: g.ply + 1, player_id: asAi ? null : user.id, san: mv.san, uci, fen,
+      white_ms: clk.white_ms, black_ms: clk.black_ms },
+  };
+}
+
+async function handle(user: any, b: Row): Promise<Row> {
+  switch (b.action) {
+    case "queue": {
+      const tc = findTimeControl(b.tc);
+      if (!tc) throw new HttpError(400, "Unknown time control");
+      const { data, error } = await admin.rpc("queue_game", {
+        p_user: user.id, p_name: displayName(user), p_avatar: avatarOf(user),
+        p_tc: tc.id, p_initial: tc.initial, p_inc: tc.increment,
+      });
+      if (error) {
+        if (error.code === "23505") throw new HttpError(409, "You are already in the queue", "duplicate");
+        throw error;
+      }
+      return { game: Array.isArray(data) ? data[0] : data };
+    }
+    case "touch_queue": {
+      const { data, error } = await admin.from("games").update({ updated_at: new Date().toISOString() })
+        .eq("id", b.gameId).eq("white_id", user.id).eq("status", "waiting").select().maybeSingle();
+      if (error) throw error;
+      return { game: data ?? await getGame(b.gameId) };
+    }
+    case "cancel_queue": {
+      const { data, error } = await admin.from("games").delete()
+        .eq("id", b.gameId).eq("white_id", user.id).eq("status", "waiting").eq("mode", "online").select().maybeSingle();
+      if (error) throw error;
+      if (data) return { game: { ...data, status: "aborted" } };
+      const g = await getGame(b.gameId);
+      mySide(g, user.id);
+      return { game: g };
+    }
+    case "new_ai": {
+      const tc = findTimeControl(b.tc);
+      const level = AI_LEVELS.find((l) => l.id === b.level);
+      const human: Side | null = b.humanColor === "w" || b.humanColor === "b" ? b.humanColor : null;
+      if (!tc || !level || !human) throw new HttpError(400, "Invalid game settings");
+      if (typeof b.engine !== "string" || !/^[a-z0-9.-]{1,64}$/.test(b.engine)) throw new HttpError(400, "Invalid engine");
+      const aiName = String(b.aiName ?? "Stockfish").slice(0, 60);
+      const now = new Date().toISOString();
+      const { data, error } = await admin.from("games").insert({
+        mode: "ai", status: "active", ai_engine: b.engine, ai_level: level.id, ai_color: human === "w" ? "b" : "w",
+        white_id: human === "w" ? user.id : null, black_id: human === "b" ? user.id : null,
+        white_name: human === "w" ? displayName(user) : aiName, black_name: human === "b" ? displayName(user) : aiName,
+        white_avatar: human === "w" ? avatarOf(user) : null, black_avatar: human === "b" ? avatarOf(user) : null,
+        tc: tc.id, initial_ms: tc.initial, increment_ms: tc.increment, white_ms: tc.initial, black_ms: tc.initial,
+        started_at: now, turn_started_at: now,
+      }).select().single();
+      if (error) throw error;
+      return { game: data };
+    }
+    case "sync": {
+      const g = await getGame(b.gameId);
+      mySide(g, user.id);
+      return { game: g, moves: await fetchMoves(g.id) };
+    }
+    case "move": return await doMove(user, b);
+    case "resign":
+      return { game: await mutate(b.gameId, user.id, async (g, me) =>
+        finishPatch(g, await ucisOf(g), { result: me === "w" ? "0-1" : "1-0", termination: "resignation" })) };
+    case "offer_draw":
+      return { game: await mutate(b.gameId, user.id, async (g) => {
+        if (g.mode !== "online") throw new HttpError(400, "Draw offers are for online games");
+        if (g.draw_offer_by && g.draw_offer_by !== user.id) {
+          return finishPatch(g, await ucisOf(g), { result: "1/2-1/2", termination: "agreement" });
+        }
+        return { draw_offer_by: user.id };
+      }) };
+    case "accept_draw":
+      return { game: await mutate(b.gameId, user.id, async (g) => {
+        if (!g.draw_offer_by || g.draw_offer_by === user.id) throw new HttpError(409, "There is no draw offer to accept", "no_offer");
+        return finishPatch(g, await ucisOf(g), { result: "1/2-1/2", termination: "agreement" });
+      }) };
+    case "decline_draw":
+      return { game: await mutate(b.gameId, user.id, (g) => {
+        if (!g.draw_offer_by || g.draw_offer_by === user.id) throw new HttpError(409, "There is no draw offer to decline", "no_offer");
+        return { draw_offer_by: null };
+      }) };
+    case "claim_draw":
+      return { game: await mutate(b.gameId, user.id, async (g) => {
+        const ucis = await ucisOf(g);
+        const { chess, keys } = replay(ucis);
+        const claim = claimableDraw(chess, keys);
+        if (!claim) throw new HttpError(409, "No draw can be claimed in this position", "not_claimable");
+        return finishPatch(g, ucis, claim);
+      }) };
+    case "timeout":
+      return { game: await mutate(b.gameId, user.id, async (g) => {
+        const key = g.turn === "w" ? "white_ms" : "black_ms";
+        const elapsed = g.ply >= 2 && g.turn_started_at ? Date.now() - Date.parse(g.turn_started_at) : 0;
+        if (g.ply < 2 || g[key] - elapsed > 0) throw new HttpError(409, "The clock has not expired", "not_flagged");
+        const ucis = await ucisOf(g);
+        return finishPatch(g, ucis, timeoutOutcome(replay(ucis).chess, g.turn), { [key]: 0 });
+      }) };
+    default:
+      throw new HttpError(400, "Unknown action");
+  }
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  try {
+    if (req.method !== "POST") throw new HttpError(405, "POST only");
+    const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const { data, error } = await admin.auth.getUser(token);
+    if (error || !data.user) throw new HttpError(401, "Please sign in again", "unauthenticated");
+    const body = await req.json().catch(() => { throw new HttpError(400, "Invalid JSON"); });
+    const out = await handle(data.user, body ?? {});
+    return json({ ...out, serverNow: Date.now() });
+  } catch (e) {
+    if (e instanceof HttpError) return json({ error: e.message, code: e.code }, e.status);
+    console.error(e);
+    return json({ error: "Server error" }, 500);
+  }
+});
+```
+
+---
+
+## SQL MIGRATION: paste into the Supabase SQL Editor
+### `supabase/migrations/0001_chess.sql`
+```sql
+-- ===================== CHESS: single, idempotent migration =====================
+-- Two application tables: games, game_moves. All writes go through the `game-action`
+-- Edge Function (service_role). Clients may only SELECT their own games/moves.
+
+create table if not exists public.games (
+  id uuid primary key default gen_random_uuid(),
+  mode text not null check (mode in ('online','ai')),
+  status text not null default 'waiting' check (status in ('waiting','active','finished','aborted')),
+  white_id uuid references auth.users(id) on delete cascade,
+  black_id uuid references auth.users(id) on delete cascade,
+  white_name text, black_name text, white_avatar text, black_avatar text,
+  ai_engine text, ai_level smallint,
+  ai_color text check (ai_color in ('w','b')),
+  tc text not null,
+  initial_ms integer not null check (initial_ms > 0),
+  increment_ms integer not null check (increment_ms >= 0),
+  white_ms integer not null check (white_ms >= 0),
+  black_ms integer not null check (black_ms >= 0),
+  turn text not null default 'w' check (turn in ('w','b')),
+  turn_started_at timestamptz,
+  fen text not null default 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+  pgn text not null default '',
+  ply integer not null default 0 check (ply >= 0),
+  result text check (result in ('1-0','0-1','1/2-1/2')),
+  termination text,
+  draw_offer_by uuid references auth.users(id) on delete set null,
+  revision integer not null default 0,
+  created_at timestamptz not null default now(),
+  started_at timestamptz,
+  updated_at timestamptz not null default now(),
+  ended_at timestamptz,
+  constraint games_distinct_players check (white_id is null or black_id is null or white_id <> black_id),
+  constraint games_mode_shape check (
+    (mode = 'online' and ai_color is null and ai_engine is null
+       and (status in ('waiting','aborted') or (white_id is not null and black_id is not null)))
+    or
+    (mode = 'ai' and ai_engine is not null and ai_level is not null and (
+       (ai_color = 'w' and white_id is null and black_id is not null) or
+       (ai_color = 'b' and black_id is null and white_id is not null)))
+  ),
+  constraint games_result_matches_status check ((status = 'finished') = (result is not null))
+);
+
+create table if not exists public.game_moves (
+  game_id uuid not null references public.games(id) on delete cascade,
+  ply integer not null check (ply >= 1),
+  player_id uuid references auth.users(id) on delete set null,   -- null = engine move
+  san text not null,
+  uci text not null check (uci ~ '^[a-h][1-8][a-h][1-8][qrbn]?$'),
+  fen text not null,
+  white_ms integer not null,
+  black_ms integer not null,
+  created_at timestamptz not null default now(),
+  primary key (game_id, ply)
+);
+
+create index if not exists games_white_idx on public.games (white_id, updated_at desc);
+create index if not exists games_black_idx on public.games (black_id, updated_at desc);
+create index if not exists games_waiting_idx on public.games (tc, created_at)
+  where status = 'waiting' and mode = 'online';
+-- One queue entry per user, enforced by the database.
+create unique index if not exists games_one_queue_per_user on public.games (white_id)
+  where status = 'waiting' and mode = 'online';
+
+-- ---------- Row Level Security ----------
+alter table public.games enable row level security;
+alter table public.game_moves enable row level security;
+
+revoke all on public.games, public.game_moves from anon, authenticated;
+grant select on public.games, public.game_moves to authenticated;
+
+drop policy if exists games_select_participants on public.games;
+create policy games_select_participants on public.games
+  for select to authenticated
+  using ((select auth.uid()) in (white_id, black_id));
+
+drop policy if exists moves_select_participants on public.game_moves;
+create policy moves_select_participants on public.game_moves
+  for select to authenticated
+  using (exists (
+    select 1 from public.games g
+    where g.id = game_moves.game_id and (select auth.uid()) in (g.white_id, g.black_id)
+  ));
+-- No INSERT/UPDATE/DELETE policies and no grants: clients cannot write. service_role bypasses RLS.
+
+-- ---------- Matchmaking (atomic) ----------
+create or replace function public.queue_game(
+  p_user uuid, p_name text, p_avatar text, p_tc text, p_initial integer, p_inc integer
+) returns public.games
+language plpgsql
+set search_path = public, pg_temp
+as $$
+declare
+  mine public.games;
+  other public.games;
+  g public.games;
+begin
+  if p_user is null then raise exception 'user required'; end if;
+
+  delete from public.games
+   where status = 'waiting' and mode = 'online' and updated_at < now() - interval '10 minutes';
+
+  select * into mine from public.games
+   where status = 'waiting' and mode = 'online' and white_id = p_user for update;
+  if found then
+    if mine.tc = p_tc then
+      update public.games set updated_at = now() where id = mine.id returning * into g;
+      return g;
+    end if;
+    delete from public.games where id = mine.id;
+  end if;
+
+  select * into other from public.games
+   where status = 'waiting' and mode = 'online' and tc = p_tc
+     and white_id <> p_user and updated_at > now() - interval '2 minutes'
+   order by created_at limit 1 for update skip locked;
+
+  if found then
+    if random() < 0.5 then
+      update public.games set
+        black_id = p_user, black_name = p_name, black_avatar = p_avatar,
+        status = 'active', started_at = now(), turn_started_at = now(),
+        revision = revision + 1, updated_at = now()
+       where id = other.id returning * into g;
+    else
+      update public.games set
+        white_id = p_user, white_name = p_name, white_avatar = p_avatar,
+        black_id = other.white_id, black_name = other.white_name, black_avatar = other.white_avatar,
+        status = 'active', started_at = now(), turn_started_at = now(),
+        revision = revision + 1, updated_at = now()
+       where id = other.id returning * into g;
+    end if;
+    return g;
+  end if;
+
+  insert into public.games (mode, status, white_id, white_name, white_avatar, tc, initial_ms, increment_ms, white_ms, black_ms)
+  values ('online', 'waiting', p_user, p_name, p_avatar, p_tc, p_initial, p_inc, p_initial, p_initial)
+  returning * into g;
+  return g;
+end $$;
+
+-- ---------- Move commit (compare-and-swap, atomic across both tables) ----------
+create or replace function public.commit_move(
+  p_game uuid, p_expected_rev integer, p_ply integer, p_player uuid,
+  p_san text, p_uci text, p_fen text, p_pgn text,
+  p_white_ms integer, p_black_ms integer, p_turn text, p_result text, p_termination text
+) returns public.games
+language plpgsql
+set search_path = public, pg_temp
+as $$
+declare g public.games;
+begin
+  update public.games set
+    fen = p_fen, pgn = p_pgn, ply = p_ply, turn = p_turn,
+    white_ms = p_white_ms, black_ms = p_black_ms,
+    turn_started_at = now(), draw_offer_by = null,
+    revision = revision + 1, updated_at = now(),
+    status = case when p_result is null then 'active' else 'finished' end,
+    result = p_result, termination = p_termination,
+    ended_at = case when p_result is null then null else now() end
+   where id = p_game and revision = p_expected_rev and status = 'active' and ply = p_ply - 1
+   returning * into g;
+  if not found then return null; end if;
+
+  insert into public.game_moves (game_id, ply, player_id, san, uci, fen, white_ms, black_ms)
+  values (p_game, p_ply, p_player, p_san, p_uci, p_fen, p_white_ms, p_black_ms);
+  return g;
+end $$;
+
+-- Only the Edge Function (service_role) may call these. Plain (non-SECURITY DEFINER) functions.
+revoke all on function public.queue_game(uuid, text, text, text, integer, integer) from public, anon, authenticated;
+revoke all on function public.commit_move(uuid, integer, integer, uuid, text, text, text, text, integer, integer, text, text, text) from public, anon, authenticated;
+grant execute on function public.queue_game(uuid, text, text, text, integer, integer) to service_role;
+grant execute on function public.commit_move(uuid, integer, integer, uuid, text, text, text, text, integer, integer, text, text, text) to service_role;
+
+-- ---------- Realtime (adds tables to the existing publication; never drops it) ----------
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'games') then
+    alter publication supabase_realtime add table public.games;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'game_moves') then
+    alter publication supabase_realtime add table public.game_moves;
+  end if;
+end $$;
+```
+
+---
+
+## Frontend
+
+### `src/main.tsx`
+```tsx
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import "./index.css";
+import App from "./App";
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
+```
+
+### `src/index.css`
+```css
+@import "tailwindcss";
+
+@theme static {
+  --color-paper: #f5f2ea;
+  --color-card: #fbfaf6;
+  --color-ink: #25282d;
+  --color-ink-soft: #5d6168;
+  --color-line: #e2ddd0;
+  --color-moss: #4d7a59;
+  --color-moss-dark: #3b6247;
+  --color-moss-soft: #e4ece4;
+  --color-danger: #a8453b;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+html, body, #root { min-height: 100%; }
+body { margin: 0; background: var(--color-paper); color: var(--color-ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.5rem;
+  border-radius: .6rem; padding: .5rem .9rem; font-size: .875rem; font-weight: 500;
+  border: 1px solid var(--color-line); background: var(--color-card); color: var(--color-ink);
+  cursor: pointer; transition: background .15s, border-color .15s;
+}
+.btn:hover:not(:disabled) { background: #efece3; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary { background: var(--color-moss); border-color: var(--color-moss); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--color-moss-dark); }
+.btn-danger { color: var(--color-danger); }
+:focus-visible { outline: 2px solid var(--color-moss); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+```
+
+### `src/lib/supabase.ts`
+```ts
+import { createClient } from "@supabase/supabase-js";
+
+const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+
+export const configError =
+  !url || !key ? "Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY (see .env.example)." : null;
+
+export const supabase = createClient(url ?? "http://localhost", key ?? "missing", {
+  auth: { flowType: "pkce", persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+});
+```
+
+### `src/lib/types.ts`
+```ts
+import type { Result, Side, Termination } from "../../supabase/functions/game-action/rules.ts";
+export type { Result, Side, Termination };
+
+export interface Game {
+  id: string;
+  mode: "online" | "ai";
+  status: "waiting" | "active" | "finished" | "aborted";
+  white_id: string | null; black_id: string | null;
+  white_name: string | null; black_name: string | null;
+  white_avatar: string | null; black_avatar: string | null;
+  ai_engine: string | null; ai_level: number | null; ai_color: Side | null;
+  tc: string; initial_ms: number; increment_ms: number;
+  white_ms: number; black_ms: number;
+  turn: Side; turn_started_at: string | null;
+  fen: string; pgn: string; ply: number;
+  result: Result | null; termination: Termination | null;
+  draw_offer_by: string | null; revision: number;
+  created_at: string; started_at: string | null; updated_at: string; ended_at: string | null;
+}
+
+export interface MoveRow {
+  game_id: string; ply: number; player_id: string | null;
+  san: string; uci: string; fen: string; white_ms: number; black_ms: number; created_at?: string;
+}
+```
+
+### `src/lib/api.ts`
+```ts
+import { FunctionsHttpError } from "@supabase/supabase-js";
+import { supabase } from "./supabase";
+import type { Game, MoveRow } from "./types";
+
+export class ApiError extends Error {
+  constructor(message: string, public code?: string, public status?: number) { super(message); }
+}
+export interface ActionResult { game: Game; move?: MoveRow; moves?: MoveRow[]; flagged?: boolean; serverNow: number }
+
+let offset = 0; // server clock minus local clock, refreshed on every response
+export const serverNow = () => Date.now() + offset;
+
+export async function act(body: Record<string, unknown>): Promise<ActionResult> {
+  const { data, error } = await supabase.functions.invoke("game-action", { body });
+  if (error) {
+    if (error instanceof FunctionsHttpError) {
+      const j = await error.context.json().catch(() => null);
+      throw new ApiError(j?.error ?? "Request failed", j?.code, error.context.status);
+    }
+    throw new ApiError("Network problem. Check your connection.", "network");
+  }
+  const r = data as ActionResult;
+  if (typeof r?.serverNow === "number") offset = r.serverNow - Date.now();
+  return r;
+}
+```
+
+### `src/lib/router.tsx`
+```tsx
+import { useEffect, useState, type ReactNode } from "react";
+
+export function navigate(path: string) {
+  history.pushState(null, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+export function usePath() {
+  const [p, setP] = useState(location.pathname);
+  useEffect(() => {
+    const f = () => setP(location.pathname);
+    addEventListener("popstate", f);
+    return () => removeEventListener("popstate", f);
+  }, []);
+  return p;
+}
+export function Link({ to, className, children }: { to: string; className?: string; children: ReactNode }) {
+  return (
+    <a href={to} className={className}
+      onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); navigate(to); }}>
+      {children}
+    </a>
+  );
+}
+```
+
+### `src/lib/auth.tsx`
+```tsx
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import type { Session, User } from "@supabase/supabase-js";
+import { supabase } from "./supabase";
+
+interface AuthCtx {
+  session: Session | null; user: User | null; loading: boolean; authError: string | null;
+  signIn: () => Promise<void>; signOut: () => Promise<void>;
+}
+const Ctx = createContext<AuthCtx>(null!);
+export const useAuth = () => useContext(Ctx);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    const qs = new URLSearchParams(location.search);
+    const callback = qs.has("code") || location.hash.includes("access_token");
+    const err = qs.get("error_description") ?? new URLSearchParams(location.hash.slice(1)).get("error_description");
+    if (err) setAuthError(err);
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      setSession(data.session);
+      if (!callback || data.session || err) setLoading(false);
+    });
+    const fallback = setTimeout(() => alive && setLoading(false), 10_000);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+      setLoading(false);
+      if (s && (location.search.includes("code=") || location.hash.includes("access_token"))) {
+        history.replaceState(null, "", location.pathname);
+      }
+    });
+    return () => { alive = false; clearTimeout(fallback); subscription.unsubscribe(); };
+  }, []);
+
+  const value = useMemo<AuthCtx>(() => ({
+    session, user: session?.user ?? null, loading, authError,
+    signIn: async () => {
+      setAuthError(null);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google", options: { redirectTo: window.location.origin },
+      });
+      if (error) setAuthError(error.message);
+    },
+    signOut: async () => { await supabase.auth.signOut(); },
+  }), [session, loading, authError]);
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+```
+
+### `src/lib/format.ts`
+```ts
+import type { Game, Termination } from "./types";
+
+export const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+export function fmtClock(ms: number) {
+  if (ms < 10_000) return (Math.max(0, ms) / 1000).toFixed(1);
+  const s = Math.ceil(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+export const fmtDate = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+
+const TERM: Record<Termination, string> = {
+  checkmate: "checkmate", stalemate: "stalemate", insufficient_material: "insufficient material",
+  fivefold_repetition: "fivefold repetition", seventyfive_move: "the 75-move rule",
+  threefold_repetition: "threefold repetition (claimed)", fifty_move: "the 50-move rule (claimed)",
+  timeout: "timeout", resignation: "resignation", agreement: "agreement",
+};
+
+export function resultText(g: Game): string {
+  if (!g.result) return "";
+  if (g.result === "1/2-1/2") {
+    return g.termination === "timeout"
+      ? "Draw: time ran out, but the opponent cannot checkmate with the remaining material"
+      : `Draw by ${g.termination ? TERM[g.termination] : "agreement"}`;
+  }
+  return `${g.result === "1-0" ? "White" : "Black"} wins by ${g.termination ? TERM[g.termination] : "result"}`;
+}
+```
+
+### `src/lib/engine.ts`
+```ts
+// Real Stockfish (UCI) running inside a dedicated Web Worker. Nothing here is simulated.
+import { AI_LEVELS } from "../../supabase/functions/game-action/rules.ts";
+
+export interface EngineEntry {
+  id: string; name: string; version: string; js: string; wasm: string; license: string; source: string; build: string;
+}
+
+export async function loadManifest(): Promise<EngineEntry[]> {
+  const r = await fetch("/engine/manifest.json", { cache: "no-cache" });
+  if (!r.ok) throw new Error("No engine is bundled in this build (missing /engine/manifest.json).");
+  const j = await r.json();
+  if (!Array.isArray(j) || j.length === 0) throw new Error("The engine manifest is empty.");
+  return j as EngineEntry[];
+}
+
+type Listener = (line: string) => void;
+
+export class UciEngine {
+  private listeners = new Set<Listener>();
+  private opts = new Map<string, { min?: number; max?: number }>();
+  private searching = false;
+  private cancelled = false;
+
+  private constructor(private worker: Worker) {
+    worker.onmessage = (e: MessageEvent) => {
+      const raw = typeof e.data === "string" ? e.data : String((e.data as { data?: unknown })?.data ?? e.data);
+      for (const line of raw.split("\n")) {
+        const t = line.trim();
+        if (t) this.listeners.forEach((l) => l(t));
+      }
+    };
+  }
+
+  private send(cmd: string) { this.worker.postMessage(cmd); }
+
+  private waitFor(pred: (l: string) => boolean, ms: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => { this.listeners.delete(fn); reject(new Error("The engine stopped responding.")); }, ms);
+      const fn: Listener = (l) => { if (pred(l)) { clearTimeout(timer); this.listeners.delete(fn); resolve(l); } };
+      this.listeners.add(fn);
+    });
+  }
+
+  static async load(entry: EngineEntry): Promise<UciEngine> {
+    const worker = new Worker(`/engine/${entry.js}`); // classic worker; the .wasm sits beside it
+    const eng = new UciEngine(worker);
+    const failed = new Promise<never>((_, rej) => { worker.onerror = () => rej(new Error("Could not start the engine worker.")); });
+    const collect: Listener = (l) => {
+      const m = /^option name (.+?) type (\w+)(.*)$/.exec(l);
+      if (!m) return;
+      const min = /min (-?\d+)/.exec(m[3]);
+      const max = /max (-?\d+)/.exec(m[3]);
+      eng.opts.set(m[1], { min: min ? +min[1] : undefined, max: max ? +max[1] : undefined });
+    };
+    try {
+      eng.listeners.add(collect);
+      const ok = eng.waitFor((l) => l === "uciok", 30_000);
+      eng.send("uci");
+      await Promise.race([ok, failed]);
+      eng.listeners.delete(collect);
+      await eng.ready();
+      return eng;
+    } catch (e) {
+      worker.terminate();
+      throw e;
+    }
+  }
+
+  async ready() {
+    const p = this.waitFor((l) => l === "readyok", 15_000);
+    this.send("isready");
+    await p;
+  }
+
+  /** Uses UCI_LimitStrength/UCI_Elo when the engine reports them, otherwise Skill Level. */
+  async configure(levelId: number) {
+    const lv = AI_LEVELS.find((l) => l.id === levelId) ?? AI_LEVELS[2];
+    const hasLimit = this.opts.has("UCI_LimitStrength");
+    if (lv.elo && hasLimit && this.opts.has("UCI_Elo")) {
+      const o = this.opts.get("UCI_Elo")!;
+      const elo = Math.min(o.max ?? lv.elo, Math.max(o.min ?? lv.elo, lv.elo));
+      this.send("setoption name UCI_LimitStrength value true");
+      this.send(`setoption name UCI_Elo value ${elo}`);
+    } else {
+      if (hasLimit) this.send("setoption name UCI_LimitStrength value false");
+      if (this.opts.has("Skill Level")) this.send(`setoption name Skill Level value ${lv.skill}`);
+    }
+    this.send("ucinewgame");
+    await this.ready();
+  }
+
+  async bestMove(fen: string, movetimeMs: number): Promise<string | null> {
+    if (this.searching) throw new Error("Engine is busy");
+    this.searching = true;
+    this.cancelled = false;
+    try {
+      this.send(`position fen ${fen}`);
+      const p = this.waitFor((l) => l.startsWith("bestmove"), movetimeMs + 20_000);
+      this.send(`go movetime ${Math.round(movetimeMs)}`);
+      const line = await p;
+      if (this.cancelled) return null;
+      const m = /^bestmove (\S+)/.exec(line);
+      return m && m[1] !== "(none)" && m[1] !== "0000" ? m[1] : null;
+    } finally {
+      this.searching = false;
+    }
+  }
+
+  cancel() { if (this.searching) { this.cancelled = true; this.send("stop"); } }
+
+  dispose() {
+    this.listeners.clear();
+    try { this.send("quit"); } catch { /* worker already gone */ }
+    this.worker.terminate();
+  }
+}
+```
+
+### `src/hooks/useGame.ts`
+```ts
+import { useCallback, useEffect, useState } from "react";
+import { act, type ActionResult } from "../lib/api";
+import { errMsg } from "../lib/format";
+import { supabase } from "../lib/supabase";
+import type { Game, MoveRow } from "../lib/types";
+
+export function useOnline() {
+  const [on, setOn] = useState(navigator.onLine);
+  useEffect(() => {
+    const a = () => setOn(true), b = () => setOn(false);
+    addEventListener("online", a); addEventListener("offline", b);
+    return () => { removeEventListener("online", a); removeEventListener("offline", b); };
+  }, []);
+  return on;
+}
+
+const pick = (cur: Game | null, next: Game) => (!cur || next.revision >= cur.revision ? next : cur);
+export function mergeMoves(a: MoveRow[], b: MoveRow[]): MoveRow[] {
+  const m = new Map<number, MoveRow>();
+  for (const x of [...a, ...b]) m.set(x.ply, x);
+  return [...m.values()].sort((x, y) => x.ply - y.ply);
+}
+
+/** Authoritative game + full move history, kept live through Realtime and re-synced on reconnect. */
+export function useGame(id: string) {
+  const [game, setGame] = useState<Game | null>(null);
+  const [moves, setMoves] = useState<MoveRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [live, setLive] = useState<"connecting" | "live" | "offline">("connecting");
+  const online = useOnline();
+
+  const sync = useCallback(async () => {
+    try {
+      const r = await act({ action: "sync", gameId: id });
+      setGame((g) => pick(g, r.game));
+      setMoves((ms) => mergeMoves(ms, r.moves ?? []));
+      setError(null);
+    } catch (e) {
+      setError(errMsg(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  const apply = useCallback((r: ActionResult) => {
+    setGame((g) => pick(g, r.game));
+    if (r.move) setMoves((ms) => mergeMoves(ms, [r.move!]));
+  }, []);
+
+  useEffect(() => { if (online) sync(); }, [online, sync]);
+
+  useEffect(() => {
+    const onVis = () => { if (document.visibilityState === "visible") sync(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [sync]);
+
+  useEffect(() => {
+    const ch = supabase.channel(`game:${id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "games", filter: `id=eq.${id}` },
+        (p) => setGame((g) => pick(g, p.new as unknown as Game)))
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "game_moves", filter: `game_id=eq.${id}` },
+        (p) => setMoves((ms) => mergeMoves(ms, [p.new as unknown as MoveRow])))
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") { setLive("live"); sync(); }
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setLive("offline");
+      });
+    return () => { supabase.removeChannel(ch); };
+  }, [id, sync]);
+
+  // Safety net: poll lightly while a game is active (faster if Realtime is down).
+  useEffect(() => {
+    if (game?.status !== "active") return;
+    const t = setInterval(() => { if (document.visibilityState === "visible") sync(); }, live === "live" ? 30_000 : 8_000);
+    return () => clearInterval(t);
+  }, [game?.status, live, sync]);
+
+  // If the move list is behind the game row, reload the full history.
+  useEffect(() => {
+    if (game && moves.length < game.ply) { const t = setTimeout(sync, 700); return () => clearTimeout(t); }
+  }, [game?.ply, moves.length, sync]);
+
+  return { game, moves, loading, error, live, online, sync, apply };
+}
+```
+
+### `src/hooks/useAiPlayer.ts`
+```ts
+import { useCallback, useEffect, useRef, useState } from "react";
+import { serverNow } from "../lib/api";
+import { loadManifest, UciEngine } from "../lib/engine";
+import { errMsg } from "../lib/format";
+import type { Game } from "../lib/types";
+import { remainingAt } from "../../supabase/functions/game-action/rules.ts";
+
+type Status = "off" | "loading" | "ready" | "thinking" | "error";
+
+/** Loads the bundled engine, and plays the engine side by asking it for real UCI moves. */
+export function useAiPlayer(game: Game, submit: (uci: string) => Promise<boolean>) {
+  const [state, setState] = useState<{ status: Status; error?: string }>({ status: "off" });
+  const [paused, setPaused] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [kick, setKick] = useState(0);
+  const [ready, setReady] = useState(false);
+  const engineRef = useRef<UciEngine | null>(null);
+  const submitRef = useRef(submit);
+  submitRef.current = submit;
+  const enabled = game.mode === "ai" && game.status === "active";
+
+  useEffect(() => {
+    if (!enabled) return;
+    let dead = false;
+    setReady(false);
+    setState({ status: "loading" });
+    (async () => {
+      try {
+        const entry = (await loadManifest()).find((e) => e.id === game.ai_engine);
+        if (!entry) throw new Error(`Engine "${game.ai_engine}" is not bundled in this build.`);
+        const eng = await UciEngine.load(entry);
+        if (dead) { eng.dispose(); return; }
+        await eng.configure(game.ai_level ?? 3);
+        if (dead) { eng.dispose(); return; }
+        engineRef.current = eng;
+        setReady(true);
+        setState({ status: "ready" });
+      } catch (e) {
+        if (!dead) setState({ status: "error", error: errMsg(e) });
+      }
+    })();
+    return () => { dead = true; engineRef.current?.dispose(); engineRef.current = null; setReady(false); };
+  }, [enabled, game.ai_engine, game.ai_level, attempt]);
+
+  useEffect(() => {
+    const eng = engineRef.current;
+    if (!enabled || !ready || !eng || paused) return;
+    if (game.turn !== game.ai_color) { setState((s) => (s.status === "thinking" ? { status: "ready" } : s)); return; }
+    let stale = false;
+    const rem = remainingAt(game, serverNow())[game.ai_color!];
+    const movetime = Math.min(2000, Math.max(150, rem / 40 + game.increment_ms * 0.6));
+    setState({ status: "thinking" });
+    eng.bestMove(game.fen, movetime)
+      .then(async (uci) => {
+        if (stale) return;
+        if (!uci) throw new Error("The engine returned no move.");
+        const ok = await submitRef.current(uci);
+        if (!ok && !stale) setTimeout(() => setKick((k) => k + 1), 1200);
+      })
+      .catch((e) => { if (!stale) setState({ status: "error", error: errMsg(e) }); });
+    return () => { stale = true; eng.cancel(); };
+  }, [enabled, ready, paused, game.revision, game.turn, game.status, kick]);
+
+  return {
+    ...state, paused,
+    stop: useCallback(() => setPaused(true), []),
+    resume: useCallback(() => setPaused(false), []),
+    retry: useCallback(() => { setAttempt((a) => a + 1); setKick((k) => k + 1); }, []),
+  };
+}
+```
+
+### `src/components/ui.tsx`
+```tsx
+import { TIME_CONTROLS } from "../../supabase/functions/game-action/rules.ts";
+
+export function Segmented<T extends string | number>({ value, options, onChange, label }: {
+  value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-2">
+      {options.map((o) => (
+        <button key={String(o.value)} role="radio" aria-checked={o.value === value} onClick={() => onChange(o.value)}
+          className={`btn ${o.value === value ? "btn-primary" : ""}`}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function TimeControlPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div role="radiogroup" aria-label="Time control" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {TIME_CONTROLS.map((t) => (
+        <button key={t.id} role="radio" aria-checked={t.id === value} onClick={() => onChange(t.id)}
+          className={`rounded-xl border px-3 py-3 text-left transition ${t.id === value ? "border-moss bg-moss-soft" : "border-line bg-card hover:bg-[#efece3]"}`}>
+          <div className="text-lg font-semibold">{t.id}</div>
+          <div className="text-xs text-ink-soft">{t.kind}</div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`rounded-2xl border border-line bg-card p-5 ${className}`}>{children}</div>
+);
+```
+
+### `src/components/Board.tsx`
+```tsx
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Chess, type Square } from "chess.js";
+import { Chessboard } from "react-chessboard"; // react-chessboard v5 "options" API
+import type { Side } from "../lib/types";
+
+interface Props {
+  fen: string;
+  orientation: "white" | "black";
+  myColor: Side | null;
+  interactive: boolean;
+  lastMove: { from: string; to: string } | null;
+  onMove: (uci: string) => void;
+}
+
+function kingSquare(chess: Chess, color: Side): string | null {
+  for (const row of chess.board()) for (const c of row) if (c && c.type === "k" && c.color === color) return c.square;
+  return null;
+}
+
+export default function Board({ fen, orientation, myColor, interactive, lastMove, onMove }: Props) {
+  const chess = useMemo(() => new Chess(fen), [fen]);
+  const [sel, setSel] = useState<string | null>(null);
+  const [promo, setPromo] = useState<{ from: string; to: string } | null>(null);
+  useEffect(() => { setSel(null); setPromo(null); }, [fen, interactive]);
+
+  const canMove = interactive && !!myColor && chess.turn() === myColor;
+  const legal = useMemo(() => (sel ? chess.moves({ square: sel as Square, verbose: true }) : []), [sel, chess]);
+
+  function attempt(from: string, to: string): boolean {
+    const cands = chess.moves({ square: from as Square, verbose: true }).filter((m) => m.to === to);
+    if (!cands.length) return false;
+    if (cands.some((m) => m.promotion)) { setPromo({ from, to }); return false; }
+    setSel(null);
+    onMove(from + to);
+    return true;
+  }
+
+  const squareStyles = useMemo(() => {
+    const s: Record<string, CSSProperties> = {};
+    const add = (sq: string, st: CSSProperties) => { s[sq] = { ...s[sq], ...st }; };
+    if (lastMove) { add(lastMove.from, { backgroundColor: "rgba(205,190,90,.45)" }); add(lastMove.to, { backgroundColor: "rgba(205,190,90,.55)" }); }
+    if (sel) add(sel, { backgroundColor: "rgba(77,122,89,.6)" });
+    if (chess.inCheck()) {
+      const k = kingSquare(chess, chess.turn());
+      if (k) add(k, { backgroundImage: "radial-gradient(circle, rgba(168,69,59,.9) 0%, rgba(168,69,59,0) 70%)" });
+    }
+    for (const m of legal) {
+      const capture = !!m.captured || m.flags.includes("e");
+      add(m.to, {
+        backgroundImage: capture
+          ? "radial-gradient(circle, transparent 58%, rgba(30,50,38,.4) 60%, rgba(30,50,38,.4) 72%, transparent 74%)"
+          : "radial-gradient(circle, rgba(30,50,38,.35) 20%, transparent 22%)",
+      });
+    }
+    return s;
+  }, [chess, sel, legal, lastMove]);
+
+  const options = {
+    id: "main-board",
+    position: fen,
+    boardOrientation: orientation,
+    squareStyles,
+    lightSquareStyle: { backgroundColor: "#ece8dc" },
+    darkSquareStyle: { backgroundColor: "#86a08b" },
+    boardStyle: { borderRadius: "8px", boxShadow: "0 8px 30px rgba(37,40,45,.14)" },
+    animationDurationInMs: 150,
+    canDragPiece: ({ piece }: { piece: { pieceType: string } }) => canMove && piece.pieceType[0] === myColor,
+    onPieceDrop: ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) =>
+      canMove && !!targetSquare ? attempt(sourceSquare, targetSquare) : false,
+    onSquareClick: ({ square }: { square: string }) => {
+      if (!canMove) return;
+      if (sel && legal.some((m) => m.to === square)) { attempt(sel, square); return; }
+      const p = chess.get(square as Square);
+      setSel(p && p.color === myColor && square !== sel ? square : null);
+    },
+  };
+
+  const glyph: Record<string, string> = { q: "♕ Queen", r: "♖ Rook", b: "♗ Bishop", n: "♘ Knight" };
+
+  return (
+    <div className="relative" role="group" aria-label="Chess board">
+      <Chessboard options={options} />
+      {promo && (
+        <div role="dialog" aria-label="Choose promotion piece"
+          className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-ink/35">
+          <div className="rounded-2xl border border-line bg-card p-4 shadow-xl">
+            <p className="mb-3 text-sm font-medium">Promote to</p>
+            <div className="grid grid-cols-2 gap-2">
+              {(["q", "r", "b", "n"] as const).map((p) => (
+                <button key={p} className="btn" onClick={() => { const { from, to } = promo; setPromo(null); setSel(null); onMove(from + to + p); }}>
+                  {glyph[p]}
+                </button>
+              ))}
+            </div>
+            <button className="btn mt-2 w-full" onClick={() => setPromo(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### `src/components/MovesPanel.tsx`
+```tsx
+import { useEffect, useRef } from "react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import type { MoveRow } from "../lib/types";
+
+export default function MovesPanel({ moves, viewPly, onSelect }: {
+  moves: MoveRow[]; viewPly: number | null; onSelect: (ply: number | null) => void;
+}) {
+  const current = viewPly ?? moves.length;
+  const activeRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => { activeRef.current?.scrollIntoView({ block: "nearest" }); }, [current]);
+
+  const rows: [MoveRow, MoveRow | undefined][] = [];
+  for (let i = 0; i < moves.length; i += 2) rows.push([moves[i], moves[i + 1]]);
+
+  const cell = (m?: MoveRow) =>
+    m ? (
+      <button ref={m.ply === current ? activeRef : undefined} onClick={() => onSelect(m.ply)}
+        aria-current={m.ply === current ? "step" : undefined}
+        className={`rounded px-2 py-1 text-left text-sm font-medium ${m.ply === current ? "bg-moss text-white" : "hover:bg-moss-soft"}`}>
+        {m.san}
+      </button>
+    ) : <span />;
+
+  const nav = (label: string, icon: React.ReactNode, ply: number | null, disabled: boolean) => (
+    <button className="btn !px-2" aria-label={label} title={label} disabled={disabled} onClick={() => onSelect(ply)}>{icon}</button>
+  );
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-2">
+        {nav("First move", <ChevronsLeft size={18} />, 0, current === 0)}
+        {nav("Previous move", <ChevronLeft size={18} />, Math.max(0, current - 1), current === 0)}
+        {nav("Next move", <ChevronRight size={18} />, current + 1, current >= moves.length)}
+        {nav("Latest move", <ChevronsRight size={18} />, null, current >= moves.length)}
+        {viewPly !== null && <button className="btn btn-primary ml-auto" onClick={() => onSelect(null)}>Back to live</button>}
+      </div>
+      <div className="max-h-72 overflow-y-auto rounded-xl border border-line bg-paper/60 p-2" aria-label="Move list">
+        {rows.length === 0 ? (
+          <p className="p-3 text-sm text-ink-soft">No moves yet.</p>
+        ) : (
+          <div className="grid grid-cols-[2rem_1fr_1fr] items-center gap-y-0.5">
+            {rows.map(([w, b], i) => (
+              <div key={w.ply} className="contents">
+                <span className="text-xs text-ink-soft">{i + 1}.</span>
+                {cell(w)}
+                {cell(b)}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+### `src/components/GameView.tsx`
+```tsx
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Chess } from "chess.js";
+import { ArrowUpDown, Copy, Cpu, Download, Flag, RefreshCw, Square as StopIcon, WifiOff } from "lucide-react";
+import Board from "./Board";
+import MovesPanel from "./MovesPanel";
+import { Card } from "./ui";
+import { useGame } from "../hooks/useGame";
+import { useAiPlayer } from "../hooks/useAiPlayer";
+import { act, ApiError, serverNow, type ActionResult } from "../lib/api";
+import { errMsg, fmtClock, resultText } from "../lib/format";
+import { navigate } from "../lib/router";
+import type { Game, MoveRow, Side } from "../lib/types";
+import { claimableDraw, remainingAt, replay, START_FEN } from "../../supabase/functions/game-action/rules.ts";
+
+export default function GameView({ gameId, userId, backTo }: { gameId: string; userId: string; backTo: string }) {
+  const g = useGame(gameId);
+  if (!g.game) {
+    return (
+      <Card className="mx-auto mt-10 max-w-md text-center">
+        {g.loading ? <p>Loading game…</p> : (
+          <>
+            <p className="mb-3">{g.error ?? "Game not found."}</p>
+            <button className="btn" onClick={g.sync}><RefreshCw size={16} /> Retry</button>
+          </>
+        )}
+      </Card>
+    );
+  }
+  if (g.game.status === "waiting") {
+    return <Card className="mx-auto mt-10 max-w-md text-center"><p>Still waiting for an opponent.</p>
+      <button className="btn mt-3" onClick={() => navigate(backTo)}>Back</button></Card>;
+  }
+  return <Play key={g.game.id} game={g.game} moves={g.moves} live={g.live} online={g.online}
+    sync={g.sync} apply={g.apply} userId={userId} backTo={backTo} />;
+}
+
+interface PlayProps {
+  game: Game; moves: MoveRow[]; live: "connecting" | "live" | "offline"; online: boolean;
+  sync: () => Promise<void>; apply: (r: ActionResult) => void; userId: string; backTo: string;
+}
+
+function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayProps) {
+  const [viewPly, setViewPly] = useState<number | null>(null);
+  const [flipped, setFlipped] = useState(false);
+  const [pending, setPending] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [confirmResign, setConfirmResign] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  const myColor: Side | null = game.mode === "ai"
+    ? (game.ai_color === "w" ? "b" : "w")
+    : game.white_id === userId ? "w" : game.black_id === userId ? "b" : null;
+  const active = game.status === "active";
+
+  const submit = useCallback(async (uci: string, asAi = false): Promise<boolean> => {
+    setBusy(true);
+    if (!asAi) {
+      try {
+        const c = new Chess(game.fen);
+        c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
+        setPending(c.fen());
+      } catch { /* server will reject */ }
+    }
+    try {
+      const r = await act({ action: "move", gameId: game.id, uci, expectedRevision: game.revision, ai: asAi });
+      apply(r);
+      if (r.flagged) setNotice("Time ran out.");
+      setNotice((n) => (r.flagged ? n : null));
+      return true;
+    } catch (e) {
+      setNotice(errMsg(e));
+      await sync();
+      return false;
+    } finally {
+      setPending(null);
+      setBusy(false);
+    }
+  }, [game.id, game.fen, game.revision, apply, sync]);
+
+  const ai = useAiPlayer(game, (uci) => submit(uci, true));
+
+  async function run(action: string) {
+    setBusy(true);
+    try { apply(await act({ action, gameId: game.id })); setNotice(null); }
+    catch (e) { setNotice(errMsg(e)); await sync(); }
+    finally { setBusy(false); setConfirmResign(false); }
+  }
+
+  // Claim the flag when the visible clock reaches zero (any client may; the server verifies).
+  useEffect(() => {
+    if (!active || game.ply < 2) return;
+    const left = remainingAt(game, serverNow())[game.turn];
+    if (left > 0) { const t = setTimeout(() => setTick((x) => x + 1), left + 50); return () => clearTimeout(t); }
+    let alive = true, tries = 0;
+    const attempt = async () => {
+      try { const r = await act({ action: "timeout", gameId: game.id }); if (alive) apply(r); }
+      catch (e) { if (alive && e instanceof ApiError && e.code === "not_flagged" && tries++ < 6) setTimeout(attempt, 400); }
+    };
+    attempt();
+    return () => { alive = false; };
+  }, [game.revision, game.status, tick]);
+
+  const select = useCallback((p: number | null) => setViewPly(p === null || p >= moves.length ? null : Math.max(0, p)), [moves.length]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.closest("input,textarea,select")) return;
+      const cur = viewPly ?? moves.length;
+      if (e.key === "ArrowLeft") select(Math.max(0, cur - 1));
+      else if (e.key === "ArrowRight") select(cur + 1);
+      else if (e.key === "Home") select(0);
+      else if (e.key === "End") select(null);
+    };
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [viewPly, moves.length, select]);
+
+  const atLive = viewPly === null;
+  const fen = !atLive ? (viewPly === 0 ? START_FEN : moves[viewPly! - 1]?.fen ?? game.fen) : pending ?? game.fen;
+  const idx = atLive ? moves.length : viewPly!;
+  const lm = idx > 0 ? moves[idx - 1] : undefined;
+  const lastMove = lm ? { from: lm.uci.slice(0, 2), to: lm.uci.slice(2, 4) } : null;
+  const interactive = atLive && active && !!myColor && game.turn === myColor && !busy && online;
+  const orientation: "white" | "black" = (myColor === "b") !== flipped ? "black" : "white";
+  const top: Side = orientation === "white" ? "b" : "w";
+
+  const claim = useMemo(() => {
+    if (!active || moves.length !== game.ply) return null;
+    try { const r = replay(moves.map((m) => m.uci)); return claimableDraw(r.chess, r.keys); } catch { return null; }
+  }, [active, game.ply, moves]);
+
+  const offerByOpp = !!game.draw_offer_by && game.draw_offer_by !== userId;
+  const offerByMe = game.draw_offer_by === userId;
+
+  async function copyPgn() {
+    try { await navigator.clipboard.writeText(game.pgn); setNotice("PGN copied."); }
+    catch { setNotice("Copy failed. Use Download PGN instead."); }
+  }
+  function downloadPgn() {
+    const url = URL.createObjectURL(new Blob([game.pgn], { type: "application/x-chess-pgn" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: `chess-${game.id.slice(0, 8)}.pgn` });
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const turnName = game.turn === "w" ? "White" : "Black";
+  const sr = active ? `${lm ? `Last move ${lm.san}. ` : ""}${turnName} to move.` : resultText(game);
+
+  return (
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]">
+      <div className="mx-auto w-full" style={{ maxWidth: "min(100%, calc(100dvh - 11rem))", minWidth: "min(100%, 18rem)" }}>
+        {(!online || live === "offline") && (
+          <div role="status" className="mb-2 flex items-center gap-2 rounded-xl bg-[#f3e3c3] px-3 py-2 text-sm">
+            <WifiOff size={16} /> {online ? "Live connection lost. Reconnecting…" : "You are offline."} The game is saved on the server and will reload when you are back.
+          </div>
+        )}
+        <PlayerBar game={game} color={top} you={myColor === top} />
+        <div className="my-2"><Board fen={fen} orientation={orientation} myColor={myColor} interactive={interactive} lastMove={lastMove} onMove={(u) => submit(u)} /></div>
+        <PlayerBar game={game} color={top === "w" ? "b" : "w"} you={myColor !== null && myColor !== top} />
+        <p className="sr-only" aria-live="polite">{sr}</p>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <Card>
+          {game.status === "finished" ? (
+            <div>
+              <p className="text-lg font-semibold">{resultText(game)}</p>
+              <p className="text-sm text-ink-soft">{game.tc} · {game.ply} plies</p>
+              <button className="btn btn-primary mt-3" onClick={() => navigate(backTo)}>Done</button>
+            </div>
+          ) : (
+            <p className="font-medium" role="status">
+              {atLive ? (interactive || game.turn === myColor ? "Your move" : `${turnName} to move`) : "Reviewing earlier position (the live game is unchanged)"}
+            </p>
+          )}
+          {notice && <p className="mt-2 text-sm text-danger" role="alert">{notice}</p>}
+          {game.mode === "ai" && active && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+              <Cpu size={16} />
+              {ai.status === "loading" && <span>Loading engine…</span>}
+              {ai.status === "thinking" && <span>Engine is thinking…</span>}
+              {ai.status === "ready" && !ai.paused && <span>Engine ready</span>}
+              {ai.paused && <span>Engine paused</span>}
+              {ai.status === "error" && <span className="text-danger">{ai.error}</span>}
+              {ai.status === "thinking" && <button className="btn !min-h-8 !py-1" onClick={ai.stop}><StopIcon size={14} /> Stop</button>}
+              {ai.paused && <button className="btn !min-h-8 !py-1" onClick={ai.resume}>Resume</button>}
+              {ai.status === "error" && <button className="btn !min-h-8 !py-1" onClick={ai.retry}>Retry</button>}
+            </div>
+          )}
+        </Card>
+
+        <Card>
+          <MovesPanel moves={moves} viewPly={viewPly} onSelect={select} />
+        </Card>
+
+        <Card className="flex flex-wrap gap-2">
+          <button className="btn" onClick={() => setFlipped((f) => !f)} aria-label="Flip board"><ArrowUpDown size={16} /> Flip</button>
+          <button className="btn" onClick={copyPgn}><Copy size={16} /> PGN</button>
+          <button className="btn" onClick={downloadPgn}><Download size={16} /> Download</button>
+          {active && myColor && (
+            <>
+              {claim && <button className="btn" disabled={busy} onClick={() => run("claim_draw")}>Claim draw ({claim.termination === "fifty_move" ? "50-move" : "threefold"})</button>}
+              {game.mode === "online" && !offerByOpp && (
+                <button className="btn" disabled={busy || offerByMe} onClick={() => run("offer_draw")}>{offerByMe ? "Draw offered" : "Offer draw"}</button>
+              )}
+              {offerByOpp && (
+                <>
+                  <button className="btn btn-primary" disabled={busy} onClick={() => run("accept_draw")}>Accept draw</button>
+                  <button className="btn" disabled={busy} onClick={() => run("decline_draw")}>Decline</button>
+                </>
+              )}
+              {!confirmResign
+                ? <button className="btn btn-danger" disabled={busy} onClick={() => setConfirmResign(true)}><Flag size={16} /> Resign</button>
+                : <button className="btn btn-danger" disabled={busy} onClick={() => run("resign")}>Confirm resign</button>}
+            </>
+          )}
+        </Card>
+        {offerByOpp && <p className="text-sm font-medium text-moss-dark">Your opponent offered a draw.</p>}
+      </div>
+    </div>
+  );
+}
+
+function PlayerBar({ game, color, you }: { game: Game; color: Side; you: boolean }) {
+  const [now, setNow] = useState(() => serverNow());
+  const running = game.status === "active" && game.ply >= 2 && game.turn === color;
+  useEffect(() => {
+    setNow(serverNow());
+    if (!running) return;
+    const t = setInterval(() => setNow(serverNow()), 100);
+    return () => clearInterval(t);
+  }, [running, game.revision]);
+
+  const ms = remainingAt(game, now)[color];
+  const name = (color === "w" ? game.white_name : game.black_name) ?? (color === "w" ? "White" : "Black");
+  const avatar = color === "w" ? game.white_avatar : game.black_avatar;
+  const isAi = game.mode === "ai" && game.ai_color === color;
+  const toMove = game.status === "active" && game.turn === color;
+
+  return (
+    <div className={`flex items-center justify-between rounded-xl border px-3 py-2 ${toMove ? "border-moss bg-moss-soft" : "border-line bg-card"}`}>
+      <div className="flex min-w-0 items-center gap-2">
+        {isAi ? <span className="grid size-8 place-items-center rounded-full bg-ink text-paper"><Cpu size={16} /></span>
+          : avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer" className="size-8 rounded-full" />
+          : <span className="grid size-8 place-items-center rounded-full bg-line text-sm font-semibold">{name[0]?.toUpperCase()}</span>}
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium">{name}{you && <span className="text-ink-soft"> (you)</span>}</div>
+          <div className="text-xs text-ink-soft">{color === "w" ? "White" : "Black"}{toMove && " · to move"}</div>
+        </div>
+      </div>
+      <div aria-label={`${color === "w" ? "White" : "Black"} clock`} className={`rounded-lg px-3 py-1 font-mono text-xl tabular-nums ${toMove ? "bg-ink text-paper" : "bg-paper"} ${ms < 10_000 && game.status === "active" ? "!text-[#ff8f80]" : ""}`}>
+        {fmtClock(ms)}
+      </div>
+    </div>
+  );
+}
+```
+
+### `src/pages/Online.tsx`
+```tsx
+import { useEffect, useRef, useState } from "react";
+import { RefreshCw } from "lucide-react";
+import { Card, TimeControlPicker } from "../components/ui";
+import GameView from "../components/GameView";
+import { act } from "../lib/api";
+import { errMsg } from "../lib/format";
+import { navigate } from "../lib/router";
+import { supabase } from "../lib/supabase";
+import type { Game } from "../lib/types";
+
+type Resume = Pick<Game, "id" | "tc" | "white_id" | "white_name" | "black_name">;
+
+export default function Online({ userId, gameId }: { userId: string; gameId?: string }) {
+  if (gameId) return <GameView gameId={gameId} userId={userId} backTo="/online" />;
+  return <Lobby userId={userId} />;
+}
+
+function Lobby({ userId }: { userId: string }) {
+  const [tc, setTc] = useState("5+0");
+  const [waiting, setWaiting] = useState<Game | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [secs, setSecs] = useState(0);
+  const [active, setActive] = useState<Resume[]>([]);
+  const waitingRef = useRef<Game | null>(null);
+  waitingRef.current = waiting;
+
+  useEffect(() => {
+    supabase.from("games").select("id,tc,white_id,white_name,black_name")
+      .eq("mode", "online").eq("status", "active").order("updated_at", { ascending: false }).limit(3)
+      .then(({ data }) => setActive((data as Resume[]) ?? []));
+  }, []);
+
+  async function find() {
+    setBusy(true); setErr(null);
+    try {
+      const r = await act({ action: "queue", tc });
+      if (r.game.status === "active") navigate(`/online/${r.game.id}`); else setWaiting(r.game);
+    } catch (e) { setErr(errMsg(e)); } finally { setBusy(false); }
+  }
+  async function cancel() {
+    const w = waiting; setWaiting(null);
+    if (!w) return;
+    try { const r = await act({ action: "cancel_queue", gameId: w.id }); if (r.game.status === "active") navigate(`/online/${r.game.id}`); } catch { /* ignore */ }
+  }
+
+  useEffect(() => {
+    if (!waiting) return;
+    const id = waiting.id, wtc = waiting.tc, t0 = Date.now();
+    setSecs(0);
+    const tick = setInterval(() => setSecs(Math.floor((Date.now() - t0) / 1000)), 1000);
+    const ch = supabase.channel(`queue:${id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "games", filter: `id=eq.${id}` },
+        (p) => { if ((p.new as Game).status === "active") navigate(`/online/${id}`); })
+      .subscribe();
+    const poll = setInterval(async () => {
+      try { const r = await act({ action: "sync", gameId: id }); if (r.game.status === "active") navigate(`/online/${id}`); } catch { /* retry */ }
+    }, 6000);
+    const beat = setInterval(() => { act({ action: "touch_queue", gameId: id }).catch(() => {}); }, 45_000);
+    void wtc;
+    return () => { clearInterval(tick); clearInterval(poll); clearInterval(beat); supabase.removeChannel(ch); };
+  }, [waiting?.id]);
+
+  useEffect(() => () => {
+    const w = waitingRef.current;
+    if (w) act({ action: "cancel_queue", gameId: w.id }).catch(() => {});
+  }, []);
+
+  return (
+    <div className="mx-auto max-w-xl space-y-4">
+      <Card>
+        <h1 className="mb-1 text-xl font-semibold">Play online</h1>
+        <p className="mb-4 text-sm text-ink-soft">Get paired with another signed-in player. Colours are assigned at random.</p>
+        {waiting ? (
+          <div role="status" className="flex flex-col items-center gap-3 py-6">
+            <RefreshCw className="animate-spin text-moss" />
+            <p className="font-medium">Looking for a {waiting.tc} opponent… {secs}s</p>
+            <button className="btn" onClick={cancel}>Cancel</button>
+          </div>
+        ) : (
+          <>
+            <TimeControlPicker value={tc} onChange={setTc} />
+            <button className="btn btn-primary mt-4 w-full" disabled={busy} onClick={find}>{busy ? "Searching…" : "Find opponent"}</button>
+          </>
+        )}
+        {err && <p className="mt-3 text-sm text-danger" role="alert">{err}</p>}
+      </Card>
+      {active.length > 0 && (
+        <Card>
+          <h2 className="mb-2 font-semibold">Resume</h2>
+          <ul className="space-y-2">
+            {active.map((g) => (
+              <li key={g.id}>
+                <button className="btn w-full justify-between" onClick={() => navigate(`/online/${g.id}`)}>
+                  <span>vs {g.white_id === userId ? g.black_name : g.white_name}</span><span className="text-ink-soft">{g.tc}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+    </div>
+  );
+}
+```
+
+### `src/pages/Computer.tsx`
+```tsx
+import { useEffect, useState } from "react";
+import { Cpu } from "lucide-react";
+import GameView from "../components/GameView";
+import { Card, Segmented, TimeControlPicker } from "../components/ui";
+import { act } from "../lib/api";
+import { loadManifest, type EngineEntry } from "../lib/engine";
+import { errMsg } from "../lib/format";
+import { navigate } from "../lib/router";
+import { AI_LEVELS } from "../../supabase/functions/game-action/rules.ts";
+
+export default function Computer({ userId, gameId }: { userId: string; gameId?: string }) {
+  if (gameId) return <GameView gameId={gameId} userId={userId} backTo="/computer" />;
+  return <Setup />;
+}
+
+function Setup() {
+  const [engines, setEngines] = useState<EngineEntry[] | null>(null);
+  const [engineErr, setEngineErr] = useState<string | null>(null);
+  const [engineId, setEngineId] = useState("");
+  const [level, setLevel] = useState(3);
+  const [color, setColor] = useState<"w" | "b" | "random">("w");
+  const [tc, setTc] = useState("10+0");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadManifest().then((m) => { setEngines(m); setEngineId(m[0].id); }).catch((e) => setEngineErr(errMsg(e)));
+  }, []);
+  const entry = engines?.find((e) => e.id === engineId);
+
+  async function start() {
+    if (!entry) return;
+    setBusy(true); setErr(null);
+    try {
+      const human = color === "random" ? (Math.random() < 0.5 ? "w" : "b") : color;
+      const lv = AI_LEVELS.find((l) => l.id === level)!;
+      const r = await act({ action: "new_ai", tc, humanColor: human, level, engine: entry.id, aiName: `${entry.name.split(" (")[0]} · ${lv.label}` });
+      navigate(`/computer/${r.game.id}`);
+    } catch (e) { setErr(errMsg(e)); setBusy(false); }
+  }
+
+  return (
+    <div className="mx-auto max-w-xl">
+      <Card className="space-y-5">
+        <div>
+          <h1 className="mb-1 text-xl font-semibold">Play the computer</h1>
+          <p className="text-sm text-ink-soft">A real Stockfish engine runs in a Web Worker inside your browser.</p>
+        </div>
+        {engineErr && <p className="text-sm text-danger" role="alert">{engineErr}</p>}
+        {!engines && !engineErr && <p className="text-sm">Checking bundled engines…</p>}
+        {engines && (
+          <>
+            <label className="block text-sm font-medium">Engine
+              <select className="mt-1 block w-full rounded-lg border border-line bg-paper px-3 py-2" value={engineId} onChange={(e) => setEngineId(e.target.value)}>
+                {engines.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </label>
+            <div><p className="mb-2 text-sm font-medium">Strength</p>
+              <Segmented label="Strength" value={level} onChange={setLevel}
+                options={AI_LEVELS.map((l) => ({ value: l.id, label: l.elo ? `${l.label} · ${l.elo}` : l.label }))} />
+            </div>
+            <div><p className="mb-2 text-sm font-medium">You play</p>
+              <Segmented label="Colour" value={color} onChange={setColor}
+                options={[{ value: "w", label: "White" }, { value: "b", label: "Black" }, { value: "random", label: "Random" }]} />
+            </div>
+            <div><p className="mb-2 text-sm font-medium">Time control</p><TimeControlPicker value={tc} onChange={setTc} /></div>
+            <button className="btn btn-primary w-full" disabled={busy || !entry} onClick={start}><Cpu size={16} /> {busy ? "Starting…" : "Start game"}</button>
+            {err && <p className="text-sm text-danger" role="alert">{err}</p>}
+          </>
+        )}
+      </Card>
+    </div>
+  );
+}
+```
+
+### `src/pages/History.tsx`
+```tsx
+import { useEffect, useState } from "react";
+import GameView from "../components/GameView";
+import { Card } from "../components/ui";
+import { errMsg, fmtDate } from "../lib/format";
+import { navigate } from "../lib/router";
+import { supabase } from "../lib/supabase";
+import type { Game } from "../lib/types";
+
+type Row = Pick<Game, "id" | "mode" | "status" | "result" | "tc" | "white_id" | "black_id" | "white_name" | "black_name" | "ai_color" | "ply" | "updated_at">;
+
+export default function History({ userId, gameId }: { userId: string; gameId?: string }) {
+  if (gameId) return <GameView gameId={gameId} userId={userId} backTo="/history" />;
+  return <List userId={userId} />;
+}
+
+function List({ userId }: { userId: string }) {
+  const [rows, setRows] = useState<Row[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = () => {
+    setErr(null);
+    supabase.from("games")
+      .select("id,mode,status,result,tc,white_id,black_id,white_name,black_name,ai_color,ply,updated_at")
+      .in("status", ["active", "finished"]).order("updated_at", { ascending: false }).limit(50)
+      .then(({ data, error }) => { if (error) setErr(errMsg(error)); else setRows((data as Row[]) ?? []); });
+  };
+  useEffect(load, []);
+
+  const info = (g: Row) => {
+    const me = g.mode === "ai" ? (g.ai_color === "w" ? "b" : "w") : g.white_id === userId ? "w" : "b";
+    const opp = (me === "w" ? g.black_name : g.white_name) ?? "Opponent";
+    let outcome = "In progress";
+    if (g.status === "finished") outcome = g.result === "1/2-1/2" ? "Draw" : (g.result === "1-0") === (me === "w") ? "Win" : "Loss";
+    return { opp, outcome };
+  };
+
+  return (
+    <div className="mx-auto max-w-2xl">
+      <Card>
+        <h1 className="mb-3 text-xl font-semibold">Game history</h1>
+        {err && <p className="text-sm text-danger" role="alert">{err} <button className="underline" onClick={load}>Retry</button></p>}
+        {!rows && !err && <p className="text-sm">Loading…</p>}
+        {rows && rows.length === 0 && <p className="py-6 text-center text-sm text-ink-soft">No games yet. Play online or against the computer and they will appear here.</p>}
+        <ul className="divide-y divide-line">
+          {rows?.map((g) => {
+            const { opp, outcome } = info(g);
+            return (
+              <li key={g.id}>
+                <button onClick={() => navigate(`/history/${g.id}`)} className="flex w-full items-center justify-between gap-3 py-3 text-left hover:bg-paper/70">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{g.mode === "ai" ? "Computer" : "Online"} · {opp}</div>
+                    <div className="text-xs text-ink-soft">{fmtDate(g.updated_at)} · {g.tc} · {Math.ceil(g.ply / 2)} moves</div>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${outcome === "Win" ? "bg-moss-soft text-moss-dark" : outcome === "Loss" ? "bg-[#f1dcd8] text-danger" : "bg-line"}`}>
+                    {g.status === "active" ? "Resume" : outcome}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
+    </div>
+  );
+}
+```
+
+### `src/App.tsx`
+```tsx
+import { Cpu, History as HistoryIcon, LogOut, Swords } from "lucide-react";
+import { AuthProvider, useAuth } from "./lib/auth";
+import { Link, usePath } from "./lib/router";
+import { configError } from "./lib/supabase";
+import { Card } from "./components/ui";
+import Online from "./pages/Online";
+import Computer from "./pages/Computer";
+import History from "./pages/History";
+
+export default function App() {
+  return <AuthProvider><Shell /></AuthProvider>;
+}
+
+function Shell() {
+  const { user, loading, signIn, signOut, authError } = useAuth();
+  const path = usePath();
+
+  if (configError) return <Center><Card><p className="text-danger">{configError}</p></Card></Center>;
+  if (loading) return <Center><p>Loading…</p></Center>;
+  if (!user) {
+    return (
+      <Center>
+        <Card className="w-full max-w-sm text-center">
+          <h1 className="mb-1 text-2xl font-semibold">Chess</h1>
+          <p className="mb-5 text-sm text-ink-soft">Play online, play Stockfish, and replay your games.</p>
+          <button className="btn btn-primary w-full" onClick={signIn}>Continue with Google</button>
+          {authError && <p className="mt-3 text-sm text-danger" role="alert">{authError}</p>}
+        </Card>
+      </Center>
+    );
+  }
+
+  const [page = "online", id] = path.split("/").filter(Boolean);
+  const meta = user.user_metadata ?? {};
+  const name: string = meta.full_name ?? meta.name ?? user.email ?? "Player";
+  const avatar: string | undefined = meta.avatar_url ?? meta.picture;
+  const nav = [
+    { to: "/online", key: "online", label: "Play Online", icon: <Swords size={16} /> },
+    { to: "/computer", key: "computer", label: "Play Computer", icon: <Cpu size={16} /> },
+    { to: "/history", key: "history", label: "Game History", icon: <HistoryIcon size={16} /> },
+  ];
+
+  return (
+    <div className="mx-auto flex min-h-dvh max-w-6xl flex-col px-4 pb-6">
+      <header className="flex flex-wrap items-center justify-between gap-3 py-4">
+        <nav className="flex flex-wrap gap-1" aria-label="Main">
+          {nav.map((n) => (
+            <Link key={n.key} to={n.to}
+              className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${page === n.key ? "bg-ink text-paper" : "hover:bg-line"}`}>
+              {n.icon}{n.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="flex items-center gap-2">
+          {avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer" className="size-8 rounded-full" />
+            : <span className="grid size-8 place-items-center rounded-full bg-line text-sm font-semibold">{name[0]?.toUpperCase()}</span>}
+          <span className="hidden max-w-40 truncate text-sm sm:inline">{name}</span>
+          <button className="btn !px-2" onClick={signOut} aria-label="Sign out" title="Sign out"><LogOut size={16} /></button>
+        </div>
+      </header>
+
+      <main className="flex-1">
+        {page === "computer" ? <Computer userId={user.id} gameId={id} />
+          : page === "history" ? <History userId={user.id} gameId={id} />
+          : <Online userId={user.id} gameId={id} />}
+      </main>
+
+      <footer className="mt-8 border-t border-line pt-4 text-xs text-ink-soft">
+        Computer opponent: Stockfish (Stockfish.js WASM build by Nathan Rugg), licensed under{" "}
+        <a className="underline" href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noreferrer">GPL-3.0</a>. Sources:{" "}
+        <a className="underline" href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noreferrer">Stockfish</a>,{" "}
+        <a className="underline" href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noreferrer">stockfish.js</a>,{" "}
+        <a className="underline" href="https://github.com/ismailabs/chess-game" target="_blank" rel="noreferrer">this app</a>.
+      </footer>
+    </div>
+  );
+}
+
+const Center = ({ children }: { children: React.ReactNode }) => (
+  <div className="grid min-h-dvh place-items-center p-4">{children}</div>
+);
+```
+
+---
+
+## Tests
+
+### `tests/rules.test.ts`
+```ts
+import { describe, expect, it } from "vitest";
+import { Chess } from "chess.js";
+import {
+  applyUci, automaticOutcome, buildPgn, claimableDraw, clockAfterMove, hasMatingMaterial,
+  remainingAt, replay, timeoutOutcome, TIME_CONTROLS,
+} from "../supabase/functions/game-action/rules.ts";
+
+const shuffle = ["g1f3", "g8f6", "f3g1", "f6g8"];
+const out = (ucis: string[]) => { const r = replay(ucis); return { r, auto: automaticOutcome(r.chess, r.keys), claim: claimableDraw(r.chess, r.keys) }; };
+
+describe("game endings", () => {
+  it("detects checkmate (fool's mate)", () => {
+    expect(out(["f2f3", "e7e5", "g2g4", "d8h4"]).auto).toEqual({ result: "0-1", termination: "checkmate" });
+  });
+  it("detects stalemate", () => {
+    expect(automaticOutcome(new Chess("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1"))?.termination).toBe("stalemate");
+  });
+  it("detects insufficient material", () => {
+    expect(automaticOutcome(new Chess("8/8/8/4k3/8/8/4K3/4N3 w - - 0 1"))?.termination).toBe("insufficient_material");
+  });
+  it("threefold repetition is claimable, not automatic", () => {
+    const o = out([...shuffle, ...shuffle]);
+    expect(o.auto).toBeNull();
+    expect(o.claim?.termination).toBe("threefold_repetition");
+  });
+  it("fivefold repetition ends the game automatically", () => {
+    expect(out(Array(4).fill(shuffle).flat()).auto?.termination).toBe("fivefold_repetition");
+  });
+  it("50-move rule is claimable; 75-move rule is automatic", () => {
+    const c50 = new Chess("8/8/8/4k3/8/8/4K3/7R w - - 100 80");
+    expect(automaticOutcome(c50)).toBeNull();
+    expect(claimableDraw(c50)?.termination).toBe("fifty_move");
+    expect(automaticOutcome(new Chess("8/8/8/4k3/8/8/4K3/7R w - - 150 100"))?.termination).toBe("seventyfive_move");
+  });
+  it("checkmate takes precedence over the 75-move rule", () => {
+    expect(automaticOutcome(new Chess("R5k1/5ppp/8/8/8/8/8/6K1 b - - 150 90"))?.termination).toBe("checkmate");
+  });
+});
+
+describe("move validation", () => {
+  it("rejects illegal and malformed moves", () => {
+    expect(() => applyUci(new Chess(), "e2e5")).toThrow();
+    expect(() => applyUci(new Chess(), "e2")).toThrow();
+    expect(() => applyUci(new Chess(), "e7e5")).toThrow(); // not black's turn
+  });
+  it("supports en passant and castling", () => {
+    const c = replay(["e2e4", "a7a6", "e4e5", "d7d5"]).chess;
+    expect(applyUci(c, "e5d6").flags).toContain("e");
+    const k = new Chess("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
+    expect(applyUci(k, "e1g1").san).toBe("O-O");
+  });
+  it("requires an explicit promotion piece and offers all four", () => {
+    const fen = "8/P6k/8/8/8/8/8/K7 w - - 0 1";
+    expect(() => applyUci(new Chess(fen), "a7a8")).toThrow();
+    expect(applyUci(new Chess(fen), "a7a8n").promotion).toBe("n");
+    expect(new Chess(fen).moves({ square: "a7", verbose: true }).filter((m) => m.promotion)).toHaveLength(4);
+  });
+});
+
+describe("timeout and mating material", () => {
+  it("timeout is a draw when the opponent cannot mate", () => {
+    const c = new Chess("8/8/8/4k3/8/8/4K3/4N3 b - - 0 1");
+    expect(timeoutOutcome(c, "b")).toEqual({ result: "1/2-1/2", termination: "timeout" });
+  });
+  it("timeout is a win when the opponent has mating material", () => {
+    const c = new Chess("8/8/8/4k3/8/8/4K3/4R3 b - - 0 1");
+    expect(timeoutOutcome(c, "b")).toEqual({ result: "1-0", termination: "timeout" });
+  });
+  it("evaluates mating material", () => {
+    expect(hasMatingMaterial(new Chess("8/8/8/4k3/8/8/4K3/4B3 w - - 0 1"), "w")).toBe(false);
+    expect(hasMatingMaterial(new Chess("8/8/8/4k3/8/8/4K3/2B1B3 w - - 0 1"), "w")).toBe(false);
+    expect(hasMatingMaterial(new Chess("8/8/8/4k3/8/8/4K3/3NN3 w - - 0 1"), "w")).toBe(true);
+  });
+});
+
+describe("clocks", () => {
+  const g = {
+    white_ms: 60_000, black_ms: 60_000, increment_ms: 2_000, turn: "w" as const,
+    turn_started_at: new Date(1_000_000).toISOString(), ply: 2, status: "active",
+  };
+  it("deducts elapsed time and adds the increment after a valid move", () => {
+    expect(clockAfterMove(g, 1_010_000)).toEqual({ white_ms: 52_000, black_ms: 60_000, flagged: false });
+  });
+  it("flags when elapsed time reaches the remaining time", () => {
+    expect(clockAfterMove(g, 1_060_000)).toMatchObject({ white_ms: 0, flagged: true });
+  });
+  it("does not run (or add increment) before both sides have moved", () => {
+    const r = clockAfterMove({ ...g, ply: 1, turn: "b" }, 99_999_999);
+    expect(r).toEqual({ white_ms: 60_000, black_ms: 60_000, flagged: false });
+  });
+  it("shows a countdown only for the side to move", () => {
+    expect(remainingAt(g, 1_005_000)).toEqual({ w: 55_000, b: 60_000 });
+    expect(remainingAt({ ...g, status: "finished" }, 1_005_000)).toEqual({ w: 60_000, b: 60_000 });
+  });
+  it("offers the six required time controls", () => {
+    expect(TIME_CONTROLS.map((t) => t.id)).toEqual(["1+0", "2+1", "3+2", "5+0", "10+0", "10+5"]);
+  });
+});
+
+describe("pgn", () => {
+  it("builds PGN with headers", () => {
+    const pgn = buildPgn(["e2e4", "e7e5"], { white: "A", black: "B", result: "*", tc: "5+0", initial: 300_000, inc: 0, date: "2026-11-17T00:00:00Z", mode: "online" });
+    expect(pgn).toContain('[White "A"]');
+    expect(pgn).toContain("1. e4 e5");
+  });
+});
+```
+
+---
+
+### `README.md`
+````md
+# Chess
+
+Play online (Supabase matchmaking + Realtime), play Stockfish (WASM in a Web Worker), and replay your games.
+Stack: React + TypeScript + Vite, Tailwind 4, chess.js, react-chessboard, Supabase (Auth, Postgres, Realtime, one Edge Function).
+
+## 1. Create the project (empty repo)
+```bash
+npm create vite@latest . -- --template react-ts
+npm install
+npm install @supabase/supabase-js chess.js react-chessboard stockfish lucide-react
+npm install -D tailwindcss @tailwindcss/vite vitest
+```
+Overwrite/add the files from this answer, delete the template leftovers (`src/App.css`, `src/assets`, `public/vite.svg`,
+`tsconfig.app.json`, `tsconfig.node.json`, `eslint.config.js`) and replace only the `scripts` block in `package.json`.
+
+```bash
+cp .env.example .env.local
+npm run dev            # copies Stockfish into public/engine, then starts Vite on http://localhost:5173
+npm run typecheck && npm test
+npm run build          # output: dist
+```
+
+## 2. Database
+Open Supabase → SQL Editor → paste all of `supabase/migrations/0001_chess.sql` → Run. It is idempotent, adds the
+two tables to the existing `supabase_realtime` publication (it never drops or recreates it), and enables RLS.
+
+## 3. Edge Function `game-action`
+```bash
+npx supabase login
+npx supabase functions deploy game-action --project-ref fhlpgtkftfhqcgppfnud --no-verify-jwt
+```
+- JWT verification is done inside the function (`auth.getUser`) so it works with the new API-key system; hence `--no-verify-jwt`.
+- Required secrets: **none**. `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically in hosted functions.
+  Only if your project has the legacy service-role key disabled: `npx supabase secrets set SERVICE_KEY=<your secret key>` (server-side only).
+- Never put a secret/service-role key in any `VITE_` variable.
+
+## 4. Auth redirect URLs (Supabase → Authentication → URL Configuration → Redirect URLs)
+Add only these (the Google provider itself is untouched):
+- `http://localhost:5173/**`
+- `https://<your-vercel-domain>/**` (add your production domain; also `https://*-<team>.vercel.app/**` if you want preview deployments)
+
+## 5. Vercel
+Framework preset: Vite. Build command `npm run build`, output directory `dist`. Environment variables (Production + Preview):
+`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`. `vercel.json` handles SPA routing.
+
+## Notes
+- **Engine**: Stockfish.js lite single-threaded WASM, copied from `node_modules/stockfish` by `scripts/copy-stockfish.mjs`, which also writes
+  `public/engine/manifest.json`. The engine picker lists only what that manifest contains; the version shown is the installed one.
+  No cross-origin-isolation headers are needed.
+- **Licence**: Stockfish and Stockfish.js are GPL-3.0. Because the app distributes them, publish this repository's source under
+  GPL-3.0-compatible terms and add the licence text (`curl -o LICENSE https://www.gnu.org/licenses/gpl-3.0.txt`). The footer links to the
+  Stockfish and stockfish.js sources. This is not legal advice.
+- **Clocks**: server stores remaining ms + `turn_started_at`; clients count down locally. Clocks start after each side's first move
+  (no increment on those two moves). The function validates elapsed time on every move and timeout claim.
+- **Draws**: threefold and 50-move are claimable (button appears when available); fivefold, 75-move, stalemate and insufficient material are automatic.
+  A flag fall is a draw when the opponent cannot possibly mate. Draw offers are online-only.
+- **Queue**: a waiting `games` row is the queue entry (unique per user); it is refreshed every 45 s and ignored by matchmaking after 2 min.
+````
+
+---
+
+### Setup recap
+1. Create the project with the npm commands above, add the files, and copy `.env.example` to `.env.local`.
+2. Run `supabase/migrations/0001_chess.sql` in the SQL Editor.
+3. Deploy the function with `npx supabase functions deploy game-action --project-ref fhlpgtkftfhqcgppfnud --no-verify-jwt`. No secrets are needed.
+4. Add the localhost and Vercel redirect URLs listed in section 4 of the README.
+5. Push to `main`, import the repo in Vercel with `npm run build` and `dist`, and set the two `VITE_` variables.
