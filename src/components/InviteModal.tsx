@@ -40,7 +40,8 @@ export default function InviteModal({ friend, status, onClose, onInviteSent }: P
         sender_id: "",
         receiver_id: friend.id,
         tc,
-        initial_ms: tc === "1+0" ? 60000 : tc === "3+2" ? 180000 : tc === "10+0" ? 600000 : 86400000,
+        initial_ms:
+          tc === "1+0" ? 60000 : tc === "3+2" ? 180000 : tc === "10+0" ? 600000 : 86400000,
         increment_ms: tc === "3+2" ? 2000 : 0,
         color_preference: color,
         status: "pending",
@@ -54,43 +55,60 @@ export default function InviteModal({ friend, status, onClose, onInviteSent }: P
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-md rounded-2xl border border-line bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-        <div className="mb-4 flex items-center justify-between">
+    <div
+      role="dialog"
+      aria-label="Challenge Friend"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-in fade-in duration-150"
+    >
+      <div className="w-full max-w-md rounded-3xl border border-white/15 bg-[#262522] text-stone-100 p-6 shadow-2xl relative overflow-hidden">
+        {/* Top header */}
+        <div className="mb-5 flex items-center justify-between border-b border-white/10 pb-4">
           <div className="flex items-center gap-3">
             {friend.avatar_url ? (
-              <img src={friend.avatar_url} alt="" className="size-10 rounded-full" />
+              <img
+                src={friend.avatar_url}
+                alt=""
+                className="size-11 rounded-xl object-cover border border-white/10 shrink-0"
+              />
             ) : (
-              <span className="grid size-10 place-items-center rounded-full bg-line font-bold">
+              <span className="grid size-11 place-items-center rounded-xl bg-[#383632] font-bold text-stone-200 text-base shrink-0">
                 {friend.display_name[0]?.toUpperCase()}
               </span>
             )}
-            <div>
-              <h2 className="text-base font-semibold">Challenge {friend.display_name}</h2>
-              <div className="flex items-center gap-1.5 text-xs text-ink-soft">
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-bold font-heading text-stone-100">
+                Challenge {friend.display_name}
+              </h2>
+              <div className="flex items-center gap-1.5 text-xs text-stone-400">
                 <span
                   className={`size-2 rounded-full ${
                     status === "online"
-                      ? "bg-emerald-500"
+                      ? "bg-[#81b64c]"
                       : status === "in-game"
-                      ? "bg-amber-500"
-                      : "bg-gray-400"
+                      ? "bg-amber-400"
+                      : "bg-stone-500"
                   }`}
                 />
                 <span className="capitalize">{status}</span>
                 <span>·</span>
-                <span>@{friend.username}</span>
+                <span className="truncate">@{friend.username}</span>
               </div>
             </div>
           </div>
-          <button className="btn !p-2" onClick={onClose} aria-label="Close dialog">
+          <button
+            type="button"
+            className="rounded-lg p-1.5 text-stone-400 hover:bg-white/10 hover:text-white transition-colors"
+            onClick={onClose}
+            aria-label="Close dialog"
+          >
             <X size={18} />
           </button>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* Time control selection */}
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-ink-soft">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-400">
               Time Control
             </label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -99,69 +117,92 @@ export default function InviteModal({ friend, status, onClose, onInviteSent }: P
                   key={t.id}
                   type="button"
                   onClick={() => setTc(t.id)}
-                  className={`flex flex-col items-center rounded-xl border p-2.5 text-center transition ${
+                  className={`flex flex-col items-center rounded-xl border p-2.5 text-center transition-all ${
                     tc === t.id
-                      ? "border-moss bg-moss-soft text-ink font-semibold"
-                      : "border-line bg-paper/60 hover:bg-[#efece3]"
+                      ? "border-[#81b64c] bg-[#81b64c]/15 text-white ring-1 ring-[#81b64c] shadow-[0_0_12px_rgba(129,182,76,0.25)] font-bold"
+                      : "border-white/10 bg-[#302e2b] text-stone-300 hover:bg-[#383632] hover:border-white/20"
                   }`}
                 >
-                  <Clock size={16} className={tc === t.id ? "text-moss" : "text-ink-soft"} />
-                  <span className="mt-1 text-sm font-medium">{t.label}</span>
-                  <span className="text-[10px] text-ink-soft">{t.kind}</span>
+                  <Clock
+                    size={16}
+                    className={tc === t.id ? "text-[#81b64c]" : "text-stone-400"}
+                  />
+                  <span className="mt-1 font-mono text-sm">{t.label}</span>
+                  <span className="text-[10px] text-stone-400">{t.kind}</span>
                 </button>
               ))}
             </div>
           </div>
 
+          {/* Color selection */}
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-ink-soft">
-              Your Side
+            <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-400">
+              Your Pieces
             </label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setColor("w")}
-                className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-sm font-medium transition ${
-                  color === "w" ? "border-moss bg-moss-soft" : "border-line bg-paper/60 hover:bg-[#efece3]"
+                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs sm:text-sm font-semibold transition-all ${
+                  color === "w"
+                    ? "border-[#81b64c] bg-[#81b64c]/15 text-white ring-1 ring-[#81b64c]"
+                    : "border-white/10 bg-[#302e2b] text-stone-300 hover:bg-[#383632]"
                 }`}
               >
-                <span className="size-3.5 rounded-full border border-ink/40 bg-white" />
+                <span className="size-3.5 rounded-full border border-black/30 bg-stone-100 shadow-xs" />
                 White
               </button>
               <button
                 type="button"
                 onClick={() => setColor("b")}
-                className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-sm font-medium transition ${
-                  color === "b" ? "border-moss bg-moss-soft" : "border-line bg-paper/60 hover:bg-[#efece3]"
+                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs sm:text-sm font-semibold transition-all ${
+                  color === "b"
+                    ? "border-[#81b64c] bg-[#81b64c]/15 text-white ring-1 ring-[#81b64c]"
+                    : "border-white/10 bg-[#302e2b] text-stone-300 hover:bg-[#383632]"
                 }`}
               >
-                <span className="size-3.5 rounded-full border border-white/40 bg-zinc-900" />
+                <span className="size-3.5 rounded-full border border-white/30 bg-stone-900 shadow-xs" />
                 Black
               </button>
               <button
                 type="button"
                 onClick={() => setColor("random")}
-                className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-sm font-medium transition ${
-                  color === "random" ? "border-moss bg-moss-soft" : "border-line bg-paper/60 hover:bg-[#efece3]"
+                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs sm:text-sm font-semibold transition-all ${
+                  color === "random"
+                    ? "border-[#81b64c] bg-[#81b64c]/15 text-white ring-1 ring-[#81b64c]"
+                    : "border-white/10 bg-[#302e2b] text-stone-300 hover:bg-[#383632]"
                 }`}
               >
-                <span className="size-3.5 rounded-full border border-ink/30 bg-gradient-to-r from-white to-zinc-900" />
+                <span className="size-3.5 rounded-full border border-white/20 bg-gradient-to-r from-stone-100 to-stone-900 shadow-xs" />
                 Random
               </button>
             </div>
           </div>
 
           {err && (
-            <p className="text-xs text-danger" role="alert">
+            <div
+              role="alert"
+              className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300"
+            >
               {err}
-            </p>
+            </div>
           )}
 
-          <div className="flex gap-2 pt-2">
-            <button className="btn flex-1" onClick={onClose} disabled={busy}>
+          <div className="flex gap-2.5 pt-2">
+            <button
+              type="button"
+              className="btn flex-1"
+              onClick={onClose}
+              disabled={busy}
+            >
               Cancel
             </button>
-            <button className="btn btn-primary flex-1" onClick={handleSend} disabled={busy}>
+            <button
+              type="button"
+              className="btn btn-primary flex-1 font-bold"
+              onClick={handleSend}
+              disabled={busy}
+            >
               {busy ? (
                 <>
                   <RefreshCw size={14} className="animate-spin" /> Sending…

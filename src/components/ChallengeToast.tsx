@@ -41,36 +41,41 @@ export default function ChallengeToast({ invite, onAccept, onDecline, busy }: Pr
   return (
     <div
       role="alert"
-      className="fixed bottom-5 right-5 z-50 flex max-w-sm items-center gap-3 rounded-2xl border-2 border-moss bg-card p-4 shadow-2xl animate-in slide-in-from-bottom-5 duration-200"
+      className="fixed bottom-16 md:bottom-6 right-4 sm:right-6 z-50 flex max-w-sm items-center gap-3.5 rounded-2xl border border-[#81b64c] bg-[#262522] p-4 shadow-2xl shadow-black/80 ring-1 ring-[#81b64c]/40 animate-in slide-in-from-bottom-5 duration-200"
     >
-      <div className="relative">
+      <div className="relative shrink-0">
         {sender?.avatar_url ? (
-          <img src={sender.avatar_url} alt="" className="size-11 rounded-full" />
+          <img
+            src={sender.avatar_url}
+            alt=""
+            className="size-11 rounded-xl object-cover border border-white/10"
+          />
         ) : (
-          <span className="grid size-11 place-items-center rounded-full bg-line font-bold">
+          <span className="grid size-11 place-items-center rounded-xl bg-[#383632] font-bold text-stone-200 text-base">
             {name[0]?.toUpperCase()}
           </span>
         )}
-        <span className="absolute -bottom-1 -right-1 grid size-5 place-items-center rounded-full bg-moss text-white">
+        <span className="absolute -bottom-1 -right-1 grid size-5 place-items-center rounded-full bg-[#81b64c] text-white shadow-sm">
           <Swords size={11} />
         </span>
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold">{name} challenged you!</div>
-        <div className="flex items-center gap-1.5 text-xs text-ink-soft">
-          <Clock size={12} />
-          <span>{invite.tc}</span>
+        <div className="truncate text-sm font-bold text-stone-100">{name} challenged you!</div>
+        <div className="flex items-center gap-1.5 text-xs text-stone-400">
+          <Clock size={12} className="text-[#81b64c]" />
+          <span className="font-mono">{invite.tc}</span>
           <span>·</span>
           <span>{colorText}</span>
           <span>·</span>
-          <span className="font-mono text-moss-dark font-medium">{secondsLeft}s</span>
+          <span className="font-mono text-[#81b64c] font-bold tabular-nums">{secondsLeft}s</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
         <button
-          className="btn btn-primary !h-8 !px-3 text-xs"
+          type="button"
+          className="btn btn-primary !h-8 !px-3 text-xs font-bold shrink-0"
           disabled={busy}
           onClick={() => onAccept(invite.id)}
           title="Accept challenge"
@@ -78,7 +83,8 @@ export default function ChallengeToast({ invite, onAccept, onDecline, busy }: Pr
           <Check size={14} /> Accept
         </button>
         <button
-          className="btn !h-8 !px-2 text-xs"
+          type="button"
+          className="btn !h-8 !px-2 text-xs text-stone-400 hover:text-red-400 shrink-0"
           disabled={busy}
           onClick={() => onDecline(invite.id)}
           title="Decline challenge"

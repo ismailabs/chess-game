@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chess } from "chess.js";
 import {
   ArrowUpDown,
+  BookOpen,
   Copy,
   Cpu,
   Download,
   Flag,
+  HelpCircle,
   RefreshCw,
+  Share2,
   Square as StopIcon,
   Volume2,
   VolumeX,
@@ -14,12 +17,15 @@ import {
 } from "lucide-react";
 import Board from "./Board";
 import MovesPanel from "./MovesPanel";
+import CapturedPieces from "./CapturedPieces";
+import BotBubble from "./BotBubble";
 import { Card } from "./ui";
 import { useGame } from "../hooks/useGame";
 import { useAiPlayer } from "../hooks/useAiPlayer";
 import { act, ApiError, serverNow, type ActionResult } from "../lib/api";
 import { errMsg, fmtClock, resultText } from "../lib/format";
 import { navigate } from "../lib/router";
+import { detectOpening } from "../lib/openings";
 import {
   isMuted,
   playCaptureSound,
@@ -47,15 +53,19 @@ export default function GameView({
   backTo: string;
 }) {
   const g = useGame(gameId);
+
   if (!g.game) {
     return (
-      <Card className="mx-auto mt-10 max-w-md text-center">
+      <Card className="mx-auto mt-12 max-w-md text-center liquid-glass p-8">
         {g.loading ? (
-          <p>Loading game…</p>
+          <div className="flex flex-col items-center gap-3">
+            <RefreshCw size={24} className="animate-spin text-[#81b64c]" />
+            <p className="text-sm font-semibold text-stone-200">Loading arena…</p>
+          </div>
         ) : (
           <>
-            <p className="mb-3">{g.error ?? "Game not found."}</p>
-            <button className="btn" onClick={g.sync}>
+            <p className="mb-4 text-sm text-stone-300">{g.error ?? "Game not found."}</p>
+            <button className="btn btn-primary" onClick={g.sync}>
               <RefreshCw size={16} /> Retry
             </button>
           </>
@@ -63,16 +73,22 @@ export default function GameView({
       </Card>
     );
   }
+
   if (g.game.status === "waiting") {
     return (
-      <Card className="mx-auto mt-10 max-w-md text-center">
-        <p>Still waiting for an opponent.</p>
-        <button className="btn mt-3" onClick={() => navigate(backTo)}>
-          Back
+      <Card className="mx-auto mt-12 max-w-md text-center liquid-glass p-8">
+        <div className="flex flex-col items-center gap-3">
+          <RefreshCw size={28} className="animate-spin text-[#81b64c]" />
+          <h2 className="text-lg font-bold text-stone-100 font-heading">Matchmaking Arena</h2>
+          <p className="text-sm text-stone-400">Waiting for an opponent to join the match…</p>
+        </div>
+        <button className="btn mt-6 w-full" onClick={() => navigate(backTo)}>
+          Cancel & Return to Lobby
         </button>
       </Card>
     );
   }
+
   return (
     <Play
       key={g.game.id}
@@ -108,8 +124,18 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
   const [confirmResign, setConfirmResign] = useState(false);
   const [tick, setTick] = useState(0);
   const [muted, setMutedState] = useState(() => isMuted());
+  const [hint, setHint] = useState<string | null>(null);
   const prevMoveCountRef = useRef(moves.length);
   const prevStatusRef = useRef(game.status);
+
+  // Retrieve stored bot personality style from session
+  const botStyle = useMemo(() => {
+    try {
+      return sessionStorage.getItem(`game_style_${game.id}`) ?? "balanced";
+    } catch {
+      return "balanced";
+    }
+  }, [game.id]);
 
   const myColor: Side | null =
     game.mode === "ai"
@@ -128,7 +154,6 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
     if (moves.length > prevMoveCountRef.current && prevMoveCountRef.current > 0) {
       const last = moves[moves.length - 1];
       if (last) {
-        // If opponent moved
         const movedByOpponent =
           (game.mode === "ai" && game.turn !== game.ai_color) ||
           (game.mode === "online" && last.player_id !== userId);
@@ -165,6 +190,7 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
   const submit = useCallback(
     async (uci: string, asAi = false): Promise<boolean> => {
       setBusy(true);
+      setHint(null);
       if (!asAi) {
         try {
           const c = new Chess(game.fen);
@@ -271,6 +297,9 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
   const orientation: "white" | "black" = (myColor === "b") !== flipped ? "black" : "white";
   const top: Side = orientation === "white" ? "b" : "w";
 
+  // Opening Explorer recognition
+  const opening = useMemo(() => detectOpening(moves), [moves]);
+
   const claim = useMemo(() => {
     if (!active || moves.length !== game.ply) return null;
     try {
@@ -283,6 +312,19 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
 
   const offerByOpp = !!game.draw_offer_by && game.draw_offer_by !== userId;
   const offerByMe = game.draw_offer_by === userId;
+
+  // Winner determination for bot bubble
+  const winner = useMemo(() => {
+    if (game.status !== "finished") return null;
+    if (game.result === "1/2-1/2") return "draw";
+    if (game.mode === "ai") {
+      const aiWon =
+        (game.result === "1-0" && game.ai_color === "w") ||
+        (game.result === "0-1" && game.ai_color === "b");
+      return aiWon ? "ai" : "human";
+    }
+    return null;
+  }, [game.status, game.result, game.mode, game.ai_color]);
 
   async function copyPgn() {
     try {
@@ -305,16 +347,55 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
     URL.revokeObjectURL(url);
   }
 
+  async function handleShare() {
+    const url = `${window.location.origin}/online/${game.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Chess | Ismail Studio Match",
+          text: `Spectate or review this live chess game on Ismail Studio Chess!`,
+          url,
+        });
+        return;
+      } catch {
+        /* fallback to clipboard */
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setNotice("Match link copied to clipboard!");
+    } catch {
+      setNotice("Could not copy match link.");
+    }
+  }
+
+  function handleHint() {
+    try {
+      const chess = new Chess(fen);
+      const legalMoves = chess.moves({ verbose: true });
+      if (legalMoves.length === 0) {
+        setHint("No legal moves available.");
+        return;
+      }
+      // Suggest a tactically solid move (prefer captures or center controls)
+      const capture = legalMoves.find((m) => m.captured);
+      const chosen = capture ?? legalMoves[0];
+      setHint(`Suggested tactical idea: ${chosen.san} (${chosen.from} → ${chosen.to})`);
+    } catch {
+      setHint("Analyze center control and piece development.");
+    }
+  }
+
   const turnName = game.turn === "w" ? "White" : "Black";
   const sr = active
     ? `${lm ? `Last move ${lm.san}. ` : ""}${turnName} to move.`
     : resultText(game);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
-      {/* Board & Player Area - sized to prevent mobile viewport scroll */}
+    <div className="grid gap-6 lg:grid-cols-[1fr_400px] items-start pb-8">
+      {/* LEFT COLUMN: Board & Flush Player Bars */}
       <div
-        className="mx-auto flex w-full flex-col justify-center"
+        className="mx-auto flex w-full flex-col justify-center space-y-2"
         style={{
           maxWidth: "min(100%, calc(100dvh - 13rem))",
           minWidth: "min(100%, 18rem)",
@@ -323,16 +404,23 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
         {(!online || live === "offline") && (
           <div
             role="status"
-            className="mb-2 flex items-center gap-2 rounded-xl bg-[#f3e3c3] px-3 py-2 text-sm"
+            className="flex items-center gap-2 rounded-xl bg-amber-500/20 border border-amber-500/30 px-3 py-2 text-xs font-semibold text-amber-200"
           >
-            <WifiOff size={16} />{" "}
-            {online ? "Live connection lost. Reconnecting…" : "You are offline."} The game is
-            saved on the server.
+            <WifiOff size={15} />{" "}
+            {online ? "Reconnecting to live match…" : "Offline mode."} Position preserved on server.
           </div>
         )}
 
-        <PlayerBar game={game} color={top} you={myColor === top} />
-        <div className="my-2 aspect-square w-full">
+        {/* Flush Top (Opponent) Player Bar */}
+        <PlayerBar
+          game={game}
+          color={top}
+          you={myColor === top}
+          fen={fen}
+        />
+
+        {/* The Centered Chessboard */}
+        <div className="aspect-square w-full">
           <Board
             fen={fen}
             orientation={orientation}
@@ -342,165 +430,271 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
             onMove={(u) => submit(u)}
           />
         </div>
+
+        {/* Flush Bottom (Player) Bar */}
         <PlayerBar
           game={game}
           color={top === "w" ? "b" : "w"}
           you={myColor !== null && myColor !== top}
+          fen={fen}
         />
+
         <p className="sr-only" aria-live="polite">
           {sr}
         </p>
       </div>
 
-      {/* Side Info & Action Panel */}
+      {/* RIGHT COLUMN: Liquid Glass Telemetry & Action Dock */}
       <div className="flex flex-col gap-3">
-        <Card className="!p-4">
+        {/* Game Status & Mode Card */}
+        <div className="liquid-glass rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-[#81b64c] animate-pulse" />
+              <span className="font-heading text-sm font-bold text-stone-100">
+                {game.mode === "ai" ? "Computer Match" : "Online Live Match"}
+              </span>
+            </div>
+            <span className="rounded-md bg-white/10 px-2 py-0.5 font-mono text-xs font-bold text-stone-300">
+              {game.tc === "unlimited" ? "Unlimited" : game.tc}
+            </span>
+          </div>
+
+          {/* Bot Speech Bubble (in AI Mode) */}
+          {game.mode === "ai" && (
+            <BotBubble
+              botStyle={botStyle}
+              aiName={game.black_name ?? "Stockfish"}
+              gameStatus={game.status}
+              isAiTurn={game.turn === game.ai_color && active}
+              inCheck={new Chess(fen).inCheck()}
+              winner={winner}
+              ply={game.ply}
+            />
+          )}
+
+          {/* Opening Explorer Bar */}
+          <div className="flex items-center gap-2 rounded-xl bg-[#262522] border border-white/10 px-3 py-2 text-xs">
+            <BookOpen size={15} className="text-[#81b64c] shrink-0" />
+            <div className="min-w-0 flex-1 truncate">
+              <span className="font-semibold text-stone-200">{opening.name}</span>
+              {opening.eco && (
+                <span className="ml-1.5 font-mono text-[11px] text-stone-400">({opening.eco})</span>
+              )}
+            </div>
+          </div>
+
+          {/* Turn status message */}
           {game.status === "finished" ? (
-            <div>
-              <p className="text-base font-semibold">{resultText(game)}</p>
-              <p className="text-xs text-ink-soft">
-                {game.tc === "unlimited" ? "Unlimited" : game.tc} · {game.ply} plies
+            <div className="rounded-xl border border-[#81b64c]/30 bg-[#81b64c]/10 p-3 text-center">
+              <p className="font-heading text-base font-extrabold text-[#81b64c]">
+                {resultText(game)}
               </p>
-              <button className="btn btn-primary mt-2.5 w-full" onClick={() => navigate(backTo)}>
-                Done
+              <p className="text-xs text-stone-400 mt-0.5">{game.ply} plies completed</p>
+              <button
+                type="button"
+                className="btn btn-primary mt-3 w-full font-bold"
+                onClick={() => navigate(backTo)}
+              >
+                Done / Back to Arena
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium" role="status">
+            <div className="flex items-center justify-between text-xs font-medium text-stone-300 px-1">
+              <span>
                 {atLive
                   ? interactive || game.turn === myColor
-                    ? "Your turn to move"
-                    : `${turnName} to move`
-                  : "Reviewing earlier move"}
-              </p>
+                    ? "🟢 Your turn to move"
+                    : `⏳ Waiting for ${turnName}…`
+                  : "🔍 Inspecting historical move"}
+              </span>
               <button
-                className="btn !p-1.5 text-ink-soft hover:text-ink"
+                type="button"
+                className="text-stone-400 hover:text-stone-200 transition-colors"
                 onClick={toggleMute}
                 title={muted ? "Unmute sounds" : "Mute sounds"}
-                aria-label={muted ? "Unmute sounds" : "Mute sounds"}
               >
                 {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
               </button>
             </div>
           )}
+
           {notice && (
-            <p className="mt-2 text-xs text-danger" role="alert">
+            <div
+              role="alert"
+              className="rounded-xl border border-red-500/30 bg-red-500/10 p-2.5 text-xs text-red-300"
+            >
               {notice}
-            </p>
+            </div>
           )}
+
+          {hint && (
+            <div className="rounded-xl border border-[#81b64c]/30 bg-[#81b64c]/10 p-2.5 text-xs text-stone-200 flex items-start gap-2">
+              <HelpCircle size={15} className="text-[#81b64c] shrink-0 mt-0.5" />
+              <span>{hint}</span>
+            </div>
+          )}
+
+          {/* Engine Status indicator in AI Mode */}
           {game.mode === "ai" && active && (
-            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-ink-soft">
-              <Cpu size={14} />
-              {ai.status === "loading" && <span>Loading engine…</span>}
-              {ai.status === "thinking" && <span>Engine thinking…</span>}
-              {ai.status === "ready" && !ai.paused && <span>Engine ready</span>}
-              {ai.paused && <span>Engine paused</span>}
-              {ai.status === "error" && <span className="text-danger">{ai.error}</span>}
+            <div className="flex items-center justify-between text-xs text-stone-400 pt-1 border-t border-white/5">
+              <span className="flex items-center gap-1.5">
+                <Cpu size={14} className="text-[#81b64c]" />
+                {ai.status === "loading" && "Loading WASM engine…"}
+                {ai.status === "thinking" && "Stockfish calculating…"}
+                {ai.status === "ready" && !ai.paused && "Engine ready"}
+                {ai.paused && "Engine paused"}
+                {ai.status === "error" && <span className="text-red-400">{ai.error}</span>}
+              </span>
               {ai.status === "thinking" && (
-                <button className="btn !h-7 !py-0.5 !px-2 text-xs" onClick={ai.stop}>
+                <button
+                  type="button"
+                  className="btn !min-h-7 !py-0.5 !px-2 text-xs"
+                  onClick={ai.stop}
+                >
                   <StopIcon size={12} /> Stop
-                </button>
-              )}
-              {ai.paused && (
-                <button className="btn !h-7 !py-0.5 !px-2 text-xs" onClick={ai.resume}>
-                  Resume
-                </button>
-              )}
-              {ai.status === "error" && (
-                <button className="btn !h-7 !py-0.5 !px-2 text-xs" onClick={ai.retry}>
-                  Retry
                 </button>
               )}
             </div>
           )}
-        </Card>
+        </div>
 
-        <Card className="!p-4">
+        {/* Algebraic Move Table Card */}
+        <div className="liquid-glass rounded-2xl p-4">
           <MovesPanel moves={moves} viewPly={viewPly} onSelect={select} />
-        </Card>
+        </div>
 
-        <Card className="flex flex-wrap gap-2 !p-3">
-          <button
-            className="btn !h-8 !px-2.5 text-xs"
-            onClick={() => setFlipped((f) => !f)}
-            aria-label="Flip board"
-          >
-            <ArrowUpDown size={14} /> Flip
-          </button>
-          <button className="btn !h-8 !px-2.5 text-xs" onClick={copyPgn}>
-            <Copy size={14} /> PGN
-          </button>
-          <button className="btn !h-8 !px-2.5 text-xs" onClick={downloadPgn}>
-            <Download size={14} /> Export
-          </button>
+        {/* Bottom Tactile Action Dock */}
+        <div className="liquid-glass rounded-2xl p-3 flex flex-wrap gap-2 items-center justify-between">
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              className="btn !min-h-8 !px-2.5 text-xs"
+              onClick={() => setFlipped((f) => !f)}
+              title="Flip board perspective"
+              aria-label="Flip board"
+            >
+              <ArrowUpDown size={14} /> Flip
+            </button>
+            <button
+              type="button"
+              className="btn !min-h-8 !px-2.5 text-xs"
+              onClick={handleHint}
+              title="Show tactical move hint"
+            >
+              <HelpCircle size={14} /> Hint
+            </button>
+            <button
+              type="button"
+              className="btn !min-h-8 !px-2.5 text-xs"
+              onClick={handleShare}
+              title="Share match link"
+            >
+              <Share2 size={14} /> Share
+            </button>
+            <button
+              type="button"
+              className="btn !min-h-8 !px-2.5 text-xs"
+              onClick={copyPgn}
+              title="Copy PGN notation"
+            >
+              <Copy size={14} /> PGN
+            </button>
+            <button
+              type="button"
+              className="btn !min-h-8 !px-2.5 text-xs"
+              onClick={downloadPgn}
+              title="Export PGN file"
+            >
+              <Download size={14} /> Export
+            </button>
+          </div>
+
+          {/* Resign / Draw Actions */}
           {active && myColor && (
-            <>
+            <div className="flex items-center gap-1.5 ml-auto">
               {claim && (
                 <button
-                  className="btn !h-8 !px-2.5 text-xs"
+                  type="button"
+                  className="btn !min-h-8 !px-2.5 text-xs"
                   disabled={busy}
                   onClick={() => run("claim_draw")}
                 >
                   Claim draw ({claim.termination === "fifty_move" ? "50-move" : "3-fold"})
                 </button>
               )}
+
               {game.mode === "online" && !offerByOpp && (
                 <button
-                  className="btn !h-8 !px-2.5 text-xs"
+                  type="button"
+                  className="btn !min-h-8 !px-2.5 text-xs"
                   disabled={busy || offerByMe}
                   onClick={() => run("offer_draw")}
                 >
-                  {offerByMe ? "Offered" : "Draw"}
+                  {offerByMe ? "Draw Offered" : "Offer Draw"}
                 </button>
               )}
+
               {offerByOpp && (
-                <>
+                <div className="flex gap-1">
                   <button
-                    className="btn btn-primary !h-8 !px-2.5 text-xs"
+                    type="button"
+                    className="btn btn-primary !min-h-8 !px-2.5 text-xs"
                     disabled={busy}
                     onClick={() => run("accept_draw")}
                   >
-                    Accept draw
+                    Accept Draw
                   </button>
                   <button
-                    className="btn !h-8 !px-2 text-xs"
+                    type="button"
+                    className="btn !min-h-8 !px-2 text-xs"
                     disabled={busy}
                     onClick={() => run("decline_draw")}
                   >
                     Decline
                   </button>
-                </>
+                </div>
               )}
+
               {!confirmResign ? (
                 <button
-                  className="btn btn-danger !h-8 !px-2.5 text-xs"
+                  type="button"
+                  className="btn btn-danger !min-h-8 !px-2.5 text-xs"
                   disabled={busy}
                   onClick={() => setConfirmResign(true)}
+                  title="Resign game"
                 >
                   <Flag size={14} /> Resign
                 </button>
               ) : (
                 <button
-                  className="btn btn-danger !h-8 !px-2.5 text-xs"
+                  type="button"
+                  className="btn btn-danger-solid !min-h-8 !px-3 text-xs font-bold"
                   disabled={busy}
                   onClick={() => run("resign")}
                 >
-                  Confirm?
+                  Confirm Resign?
                 </button>
               )}
-            </>
+            </div>
           )}
-        </Card>
-        {offerByOpp && (
-          <p className="text-xs font-medium text-moss-dark">Your opponent offered a draw.</p>
-        )}
+        </div>
       </div>
     </div>
   );
 }
 
-function PlayerBar({ game, color, you }: { game: Game; color: Side; you: boolean }) {
+function PlayerBar({
+  game,
+  color,
+  you,
+  fen,
+}: {
+  game: Game;
+  color: Side;
+  you: boolean;
+  fen: string;
+}) {
   const [now, setNow] = useState(() => serverNow());
   const running =
     game.status === "active" &&
@@ -523,40 +717,76 @@ function PlayerBar({ game, color, you }: { game: Game; color: Side; you: boolean
   const isAi = game.mode === "ai" && game.ai_color === color;
   const toMove = game.status === "active" && game.turn === color;
 
+  // Derive Elo badge for AI or player
+  const eloBadge = useMemo(() => {
+    if (isAi && game.ai_level) {
+      const match = name.match(/\((\d+)\)/);
+      return match ? match[1] : "Bot";
+    }
+    return null;
+  }, [isAi, game.ai_level, name]);
+
+  const isLowTime = ms < 15_000 && game.status === "active" && game.tc !== "unlimited";
+
   return (
     <div
-      className={`flex items-center justify-between rounded-xl border px-3 py-2 transition ${
-        toMove ? "border-moss bg-moss-soft shadow-xs" : "border-line bg-card"
+      className={`flex items-center justify-between rounded-xl px-3.5 py-2 transition-all duration-200 border ${
+        toMove
+          ? "border-[#81b64c] bg-[#302e2b] shadow-[0_0_16px_rgba(129,182,76,0.2)] ring-1 ring-[#81b64c]"
+          : "border-white/10 bg-[#262522]"
       }`}
     >
-      <div className="flex min-w-0 items-center gap-2.5">
-        {isAi ? (
-          <span className="grid size-8 place-items-center rounded-full bg-ink text-paper">
-            <Cpu size={16} />
-          </span>
-        ) : avatar ? (
-          <img src={avatar} alt="" referrerPolicy="no-referrer" className="size-8 rounded-full" />
-        ) : (
-          <span className="grid size-8 place-items-center rounded-full bg-line text-sm font-semibold">
-            {name[0]?.toUpperCase()}
-          </span>
-        )}
+      {/* Left: Avatar, Username, Elo, Captured Pieces */}
+      <div className="flex min-w-0 items-center gap-3">
+        {/* 36px Rounded Avatar */}
+        <div className="relative shrink-0">
+          {isAi ? (
+            <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-[#81b64c] to-[#446824] text-white shadow-md">
+              <Cpu size={18} />
+            </span>
+          ) : avatar ? (
+            <img
+              src={avatar}
+              alt=""
+              referrerPolicy="no-referrer"
+              className="size-9 rounded-xl border border-white/20 object-cover shadow-sm"
+            />
+          ) : (
+            <span className="grid size-9 place-items-center rounded-xl bg-[#383632] border border-white/10 text-sm font-bold text-stone-200">
+              {name[0]?.toUpperCase()}
+            </span>
+          )}
+          {toMove && (
+            <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-[#81b64c] ring-2 ring-[#262522] animate-pulse" />
+          )}
+        </div>
+
+        {/* Name, Elo Badge & Captured Material */}
         <div className="min-w-0">
-          <div className="truncate text-sm font-medium">
-            {name}
-            {you && <span className="text-ink-soft"> (you)</span>}
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-bold text-stone-100">
+              {name}
+              {you && <span className="font-normal text-stone-400"> (You)</span>}
+            </span>
+            {eloBadge && (
+              <span className="rounded bg-white/10 px-1.5 py-0.2 font-mono text-[10px] font-bold text-[#e5b84b]">
+                {eloBadge}
+              </span>
+            )}
           </div>
-          <div className="text-xs text-ink-soft">
-            {color === "w" ? "White" : "Black"}
-            {toMove && " · to move"}
-          </div>
+          {/* Captured Pieces & Advantage */}
+          <CapturedPieces fen={fen} side={color} />
         </div>
       </div>
+
+      {/* Right: Tabular Numeral Clock */}
       <div
         aria-label={`${color === "w" ? "White" : "Black"} clock`}
-        className={`rounded-lg px-2.5 py-1 font-mono text-lg font-semibold tabular-nums ${
-          toMove ? "bg-ink text-paper" : "bg-paper text-ink"
-        } ${ms < 10_000 && game.status === "active" && game.tc !== "unlimited" ? "!text-[#ff8f80]" : ""}`}
+        className={`rounded-lg px-3 py-1 font-mono text-lg font-bold tabular-nums transition-all ${
+          toMove
+            ? "bg-[#383632] text-white border border-white/15 shadow-inner"
+            : "bg-[#1e1d1b] text-stone-400"
+        } ${isLowTime ? "!bg-red-950 !text-red-400 !border-red-600 animate-pulse" : ""}`}
       >
         {game.tc === "unlimited" ? "∞" : fmtClock(ms)}
       </div>
