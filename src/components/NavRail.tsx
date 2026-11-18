@@ -8,6 +8,7 @@ import {
   VolumeX,
 } from "lucide-react";
 import { Link } from "../lib/router";
+import { ThemeToggle } from "./ui";
 
 interface Props {
   activePage: string;
@@ -111,6 +112,11 @@ export default function NavRail({
       {/* Bottom: Sound Toggle & User Profile Card */}
       <div className="space-y-3 pt-4 border-t border-white/10">
         {/* Sound toggle button */}
+        <div className="flex items-center justify-between px-2 py-1">
+          <span className="text-xs font-medium text-stone-400">Theme</span>
+          <ThemeToggle />
+        </div>
+
         <button
           type="button"
           onClick={onToggleMute}

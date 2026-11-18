@@ -1,50 +1,119 @@
 @import "tailwindcss";
 
-@theme static {
-  --color-studio-base: #262522;
-  --color-studio-canvas: #302e2b;
-  --color-studio-elevated: #383632;
-  --color-studio-elevated-hover: #44413c;
-  --color-studio-border: rgba(255, 255, 255, 0.11);
-  --color-studio-border-strong: rgba(255, 255, 255, 0.2);
-  --color-studio-text: #f5f5f4;
-  --color-studio-muted: #a8a29e;
-  --color-studio-subtle: #78716c;
+:root {
+  /* Default: System / Light */
+  --bg: #f3f5f0;
+  --surface: #ffffff;
+  --surface-container: #e9ede4;
+  --surface-container-high: #dfe5d8;
+  --on-surface: #1b1f17;
+  --on-surface-variant: #4b5143;
+  --outline: rgba(0, 0, 0, 0.12);
+  --outline-variant: rgba(0, 0, 0, 0.06);
 
-  /* Tactical Chess.com Emerald Tokens */
-  --color-emerald-cta: #81b64c;
-  --color-emerald-hover: #95c85c;
-  --color-emerald-dark: #537a2e;
-  --color-emerald-soft: rgba(129, 182, 76, 0.16);
+  --primary: #5d9a30;
+  --primary-hover: #4e8328;
+  --primary-text: #3d7a1c;
+  --on-primary: #ffffff;
 
-  /* Brushed Gold Accents */
-  --color-gold-accent: #e5b84b;
-  --color-gold-soft: rgba(229, 184, 75, 0.16);
+  --tertiary: #a9760a;
+  --tertiary-hover: #8c5f04;
+  --on-tertiary: #ffffff;
 
-  /* Tournament Board Squares */
-  --color-board-light: #eeeed2;
-  --color-board-dark: #769656;
-  --color-board-highlight: rgba(255, 255, 0, 0.45);
+  --error: #b3261e;
+  --on-error: #ffffff;
 
-  /* Danger / Resign */
-  --color-danger: #ef4444;
-  --color-danger-dark: #991b1b;
-  --color-danger-soft: rgba(239, 68, 68, 0.15);
+  --board-light: #eeeed2;
+  --board-dark: #769656;
+  --board-highlight: rgba(255, 255, 0, 0.45);
+
+  /* Apple Liquid Glass Tokens (Functional Layer Only) */
+  --glass-bg: color-mix(in oklab, var(--surface) 72%, transparent);
+  --glass-border: color-mix(in oklab, var(--on-surface) 10%, transparent);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+
+  /* Motion Tokens (Spring curves & durations) */
+  --ease-spring-fast: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-spring-default: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-spring-slow: cubic-bezier(0.34, 1.2, 0.64, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 150ms;
+  --duration-default: 300ms;
+  --duration-slow: 500ms;
 
   /* Typography */
   --font-display: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+}
+
+[data-theme="dark"] {
+  --bg: #1d1c1a;
+  --surface: #262522;
+  --surface-container: #302e2b;
+  --surface-container-high: #3a3834;
+  --on-surface: #eef0ea;
+  --on-surface-variant: #b9bdb2;
+  --outline: rgba(255, 255, 255, 0.12);
+  --outline-variant: rgba(255, 255, 255, 0.06);
+
+  --primary: #81b64c;
+  --primary-hover: #95c85c;
+  --primary-text: #9bd05f;
+  --on-primary: #10200a;
+
+  --tertiary: #e5b84b;
+  --tertiary-hover: #f0c560;
+  --on-tertiary: #2a1f05;
+
+  --error: #ff7a70;
+  --on-error: #370b07;
+
+  /* Liquid Glass in Dark Theme */
+  --glass-bg: color-mix(in oklab, var(--surface) 64%, transparent);
+  --glass-border: color-mix(in oklab, var(--on-surface) 12%, transparent);
+  --glass-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+@theme static {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-text: var(--primary-text);
+  --color-on-primary: var(--on-primary);
+
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-hover: var(--tertiary-hover);
+
+  --color-error: var(--error);
+
+  --color-board-light: var(--board-light);
+  --color-board-dark: var(--board-dark);
+  --color-board-highlight: var(--board-highlight);
+
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
 }
 
 html, body, #root {
   min-height: 100%;
-  background-color: #262522;
-  color: #f5f5f4;
+  background-color: var(--bg);
+  color: var(--on-surface);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior-y: none;
+  transition: background-color var(--duration-default) var(--ease-standard),
+              color var(--duration-default) var(--ease-standard);
 }
 
 /* Headings use Plus Jakarta Sans */
@@ -54,141 +123,65 @@ h1, h2, h3, h4, .font-heading {
 
 /* Tabular numerals for clocks, Elo, moves */
 .tabular-nums, .font-mono {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
-/* Apple Liquid Glass Container Utility */
-.liquid-glass {
-  background: linear-gradient(145deg, rgba(48, 46, 43, 0.72) 0%, rgba(30, 29, 27, 0.86) 100%);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+/* =========================================================================
+   APPLE LIQUID GLASS UTILITY (FUNCTIONAL LAYER ONLY)
+   Nav bars, tabs, action docks, floating sheets, toasts, dialogs.
+   NEVER place on content layer (board bezel, move list, profile cards).
+   ========================================================================= */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-specular), var(--glass-shadow);
 }
 
-.liquid-glass-subtle {
-  background: rgba(48, 46, 43, 0.45);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+/* Fallback for browsers lacking backdrop-filter support */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass {
+    background: var(--surface);
+    border: 1px solid var(--outline);
+  }
 }
 
-/* Tactile Button Architecture */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  min-height: 2.25rem;
-  border-radius: 0.65rem;
-  padding: 0.45rem 0.85rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  background: #383632;
-  color: #f5f5f4;
-  cursor: pointer;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
-  transition: background 0.15s, border-color 0.15s, transform 0.08s, box-shadow 0.08s;
-  user-select: none;
+/* Accessibility Fallbacks */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid var(--outline);
+  }
 }
 
-.btn:hover:not(:disabled) {
-  background: #44413c;
-  border-color: rgba(255, 255, 255, 0.2);
+@media (prefers-contrast: more) {
+  .glass {
+    background: var(--surface);
+    border: 2px solid var(--on-surface);
+  }
 }
 
-.btn:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 0 0 transparent;
+/* Reduced motion override */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-.btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-/* Emerald 3D CTA Button (Chess.com Signature) */
-.btn-primary {
-  background: #81b64c;
-  border-color: #81b64c;
-  color: #ffffff;
-  box-shadow: 0 4px 0 #537a2e;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #95c85c;
-  border-color: #95c85c;
-}
-
-.btn-primary:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 2px 0 #537a2e;
-}
-
-/* Danger Tactile Button */
-.btn-danger {
-  background: #2a2221;
-  border-color: rgba(239, 68, 68, 0.35);
-  color: #ef4444;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: #3a2524;
-  border-color: #ef4444;
-  color: #fca5a5;
-}
-
-.btn-danger-solid {
-  background: #dc2626;
-  border-color: #dc2626;
-  color: #ffffff;
-  box-shadow: 0 3px 0 #991b1b;
-}
-
-.btn-danger-solid:hover:not(:disabled) {
-  background: #ef4444;
-}
-
-.btn-danger-solid:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #991b1b;
-}
-
-/* Ghost Button */
-.btn-ghost {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-}
-
-.btn-ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: transparent;
-}
-
+/* Focus indicator */
 :focus-visible {
-  outline: 2px solid #81b64c;
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
 }
 
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-color: var(--outline) transparent;
 }
 
 .touch-manipulation {

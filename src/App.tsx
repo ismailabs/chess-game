@@ -8,10 +8,11 @@ import {
 import { AuthProvider, useAuth } from "./lib/auth";
 import { usePath } from "./lib/router";
 import { configError, supabase } from "./lib/supabase";
-import { Card } from "./components/ui";
+import { Card, ThemeToggle } from "./components/ui";
 import Online from "./pages/Online";
 import Computer from "./pages/Computer";
 import History from "./pages/History";
+import DevKit from "./pages/DevKit";
 import FriendsModal from "./components/FriendsModal";
 import InviteModal from "./components/InviteModal";
 import ChallengeToast from "./components/ChallengeToast";
@@ -86,6 +87,10 @@ function Shell() {
     setMuted(next);
   }
 
+  if (path === "/dev/kit") {
+    return <DevKit />;
+  }
+
   if (configError) {
     return (
       <div className="grid min-h-dvh place-items-center bg-[#262522] p-4 text-stone-100">
@@ -148,6 +153,7 @@ function Shell() {
           </div>
 
           <div className="flex items-center gap-1.5">
+            <ThemeToggle />
             <button
               type="button"
               className="rounded-lg p-2 text-stone-400 hover:text-stone-200 transition-colors"

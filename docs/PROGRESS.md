@@ -12,3 +12,20 @@
   - Build health: PASSED (`npm run typecheck && npm test && npm run build`)
   - Project memory files: PASSED
 - **Next Up:** Phase 1 (Foundation: tokens, theme, shared UI primitives, `/dev/kit`).
+
+## 2026-11-18 — Phase 1: Foundation (Track A)
+- **Status:** COMPLETED
+- **Actions Completed:**
+  - Implemented Material 3 Expressive color roles & Apple Liquid Glass utility with accessibility fallbacks in `src/index.css`.
+  - Added zero-flash pre-paint inline theme script to `index.html`.
+  - Built unified theme manager `src/lib/theme.ts` supporting System, Light, and Dark modes with automatic `meta[name=theme-color]` updating.
+  - Centralized user-facing copy strings in `src/lib/copy.ts`.
+  - Built comprehensive shared UI primitives in `src/components/ui/` (`Button`, `Card`, `GlassCard`, `Chip`, `Segmented`, `TimeControlPicker`, `Dialog`, `BottomSheet`, `Toast`, `Skeleton`, `Avatar`, `RatingBadge`, `ThemeToggle`, `Tabs`, `Input`, `Switch`).
+  - Upgraded router in `src/lib/router.tsx` to handle parameter matching and developer routes.
+  - Built interactive `/dev/kit` component showcase in `src/pages/DevKit.tsx`.
+  - Verified live component rendering, theme switching, dialog, and bottom sheet via browser subagent.
+- **Gates:**
+  - Build health: PASSED (`npm run typecheck && npm test && npm run build`)
+  - DevKit verification: PASSED (all 8 sections, theme switching, dialog modal, bottom sheet)
+  - Contrast table: PASSED (recorded in `docs/DESIGN.md`)
+- **Next Up:** Merge `v2/foundation` into `main`, then start parallel tracks (Track B: Brand, Track C: Backend, Track D: Bots).
