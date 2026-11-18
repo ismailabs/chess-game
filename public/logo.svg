@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="knightGrad" x1="8" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4d7a59" />
+      <stop offset="100%" stop-color="#2a4732" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="12" y1="10" x2="36" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#86a08b" />
+      <stop offset="100%" stop-color="#4d7a59" />
+    </linearGradient>
+  </defs>
+  <!-- Base Plate / Pedestal -->
+  <rect x="6" y="38" width="36" height="5" rx="2.5" fill="url(#knightGrad)" />
+  <rect x="10" y="34" width="28" height="4" rx="2" fill="url(#knightGrad)" />
+  <!-- Modern Knight Silhouette -->
+  <path d="M14 34 C14 30 15 26 17 23 C18.5 20.8 19 18 18 15 C17 12 18.5 8 23 6 C24.5 5.3 27 5.8 28 7.5 C29 9.2 28.5 11 27 12 C30 11.5 33 13 34 16 C35 19 33.5 21.5 32 23 C34 24.5 35 27 34.5 30 C34.2 32 33 34 33 34 Z" fill="url(#knightGrad)" />
+  <!-- Mane / Neck Cutout Highlight -->
+  <path d="M21 16 C22 13 24 10 26 9.5 C25 11.5 25 13.5 23 15 C22.2 15.6 21.6 15.9 21 16 Z" fill="#f5f2ea" opacity="0.9" />
+  <!-- Eye dot -->
+  <circle cx="28" cy="15" r="1.6" fill="#f5f2ea" />
+  <!-- Dynamic Muzzle / Jaw slit -->
+  <path d="M33 21 C31 22 28 22 26 21" stroke="#f5f2ea" stroke-width="1.6" stroke-linecap="round" />
+  <!-- Subtle Crown Points on Pedestal -->
+  <circle cx="16" cy="40.5" r="1" fill="#f5f2ea" opacity="0.7" />
+  <circle cx="24" cy="40.5" r="1" fill="#f5f2ea" opacity="0.7" />
+  <circle cx="32" cy="40.5" r="1" fill="#f5f2ea" opacity="0.7" />
+</svg>

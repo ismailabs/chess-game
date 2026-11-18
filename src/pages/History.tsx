@@ -49,7 +49,7 @@ function List({ userId }: { userId: string }) {
                 <button onClick={() => navigate(`/history/${g.id}`)} className="flex w-full items-center justify-between gap-3 py-3 text-left hover:bg-paper/70">
                   <div className="min-w-0">
                     <div className="truncate font-medium">{g.mode === "ai" ? "Computer" : "Online"} · {opp}</div>
-                    <div className="text-xs text-ink-soft">{fmtDate(g.updated_at)} · {g.tc} · {Math.ceil(g.ply / 2)} moves</div>
+                    <div className="text-xs text-ink-soft">{fmtDate(g.updated_at)} · {g.tc === "unlimited" ? "Unlimited" : g.tc} · {Math.ceil(g.ply / 2)} moves</div>
                   </div>
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold ${outcome === "Win" ? "bg-moss-soft text-moss-dark" : outcome === "Loss" ? "bg-[#f1dcd8] text-danger" : "bg-line"}`}>
                     {g.status === "active" ? "Resume" : outcome}

@@ -92,8 +92,8 @@ describe("clocks", () => {
     expect(remainingAt(g, 1_005_000)).toEqual({ w: 55_000, b: 60_000 });
     expect(remainingAt({ ...g, status: "finished" }, 1_005_000)).toEqual({ w: 60_000, b: 60_000 });
   });
-  it("offers the six required time controls", () => {
-    expect(TIME_CONTROLS.map((t) => t.id)).toEqual(["1+0", "2+1", "3+2", "5+0", "10+0", "10+5"]);
+  it("offers the required time controls", () => {
+    expect(TIME_CONTROLS.map((t) => t.id)).toEqual(["1+0", "2+1", "3+2", "5+0", "10+0", "10+5", "unlimited"]);
   });
 });
 

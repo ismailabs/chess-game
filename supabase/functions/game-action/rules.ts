@@ -16,16 +16,24 @@ export const TIME_CONTROLS = [
   { id: "5+0", initial: 300_000, increment: 0, kind: "Blitz" },
   { id: "10+0", initial: 600_000, increment: 0, kind: "Rapid" },
   { id: "10+5", initial: 600_000, increment: 5_000, kind: "Rapid" },
+  { id: "unlimited", initial: 86_400_000, increment: 0, kind: "Casual" },
 ] as const;
 export const findTimeControl = (id: unknown) => TIME_CONTROLS.find((t) => t.id === id);
 
 export const AI_LEVELS = [
-  { id: 1, label: "Beginner", elo: 1320, skill: 1 },
-  { id: 2, label: "Casual", elo: 1600, skill: 5 },
-  { id: 3, label: "Club", elo: 1900, skill: 9 },
-  { id: 4, label: "Strong", elo: 2200, skill: 13 },
-  { id: 5, label: "Expert", elo: 2600, skill: 17 },
+  { id: 1, label: "Beginner", elo: 900, skill: 1 },
+  { id: 2, label: "Casual", elo: 1300, skill: 5 },
+  { id: 3, label: "Club", elo: 1700, skill: 9 },
+  { id: 4, label: "Strong", elo: 2100, skill: 13 },
+  { id: 5, label: "Expert", elo: 2400, skill: 17 },
   { id: 6, label: "Maximum", elo: null, skill: 20 },
+] as const;
+
+export const BOT_STYLES = [
+  { id: "balanced", name: "Balanced", desc: "Classical strategic play with balanced tactics." },
+  { id: "aggressive", name: "Aggressive (Tal)", desc: "Relentless tactics, attacks on the king, and sharp play." },
+  { id: "defensive", name: "Defensive (Petrosian)", desc: "Rock-solid prophylaxis, solid pawn structures, patience." },
+  { id: "beginner", name: "Casual Patzer", desc: "Casual play with human-like inaccuracies and open games." },
 ] as const;
 
 export const UCI_RE = /^[a-h][1-8][a-h][1-8][qrbn]?$/;
@@ -95,10 +103,10 @@ export function timeoutOutcome(chess: Chess, flagged: Side): Outcome {
 
 export interface ClockState {
   white_ms: number; black_ms: number; increment_ms: number;
-  turn: Side; turn_started_at: string | null; ply: number; status: string;
+  turn: Side; turn_started_at: string | null; ply: number; status: string; tc?: string;
 }
-export const clockRunning = (g: Pick<ClockState, "status" | "ply" | "turn_started_at">) =>
-  g.status === "active" && g.ply >= 2 && !!g.turn_started_at;
+export const clockRunning = (g: Pick<ClockState, "status" | "ply" | "turn_started_at" | "tc">) =>
+  g.status === "active" && g.ply >= 2 && !!g.turn_started_at && g.tc !== "unlimited";
 
 /** Visible remaining time for both sides at `nowMs` (client display; nothing is written per second). */
 export function remainingAt(g: ClockState, nowMs: number) {

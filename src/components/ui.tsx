@@ -17,11 +17,11 @@ export function Segmented<T extends string | number>({ value, options, onChange,
 
 export function TimeControlPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div role="radiogroup" aria-label="Time control" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div role="radiogroup" aria-label="Time control" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {TIME_CONTROLS.map((t) => (
         <button key={t.id} role="radio" aria-checked={t.id === value} onClick={() => onChange(t.id)}
-          className={`rounded-xl border px-3 py-3 text-left transition ${t.id === value ? "border-moss bg-moss-soft" : "border-line bg-card hover:bg-[#efece3]"}`}>
-          <div className="text-lg font-semibold">{t.id}</div>
+          className={`rounded-xl border px-3 py-2.5 text-left transition ${t.id === value ? "border-moss bg-moss-soft shadow-xs" : "border-line bg-card hover:bg-[#efece3]"}`}>
+          <div className="text-base font-semibold">{t.id === "unlimited" ? "∞ Unlimited" : t.id}</div>
           <div className="text-xs text-ink-soft">{t.kind}</div>
         </button>
       ))}

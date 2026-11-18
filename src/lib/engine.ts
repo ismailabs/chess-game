@@ -72,8 +72,8 @@ export class UciEngine {
     await p;
   }
 
-  /** Uses UCI_LimitStrength/UCI_Elo when the engine reports them, otherwise Skill Level. */
-  async configure(levelId: number) {
+  /** Uses UCI_LimitStrength/UCI_Elo when the engine reports them, otherwise Skill Level and Bot Style. */
+  async configure(levelId: number, styleId?: string) {
     const lv = AI_LEVELS.find((l) => l.id === levelId) ?? AI_LEVELS[2];
     const hasLimit = this.opts.has("UCI_LimitStrength");
     if (lv.elo && hasLimit && this.opts.has("UCI_Elo")) {
@@ -85,6 +85,15 @@ export class UciEngine {
       if (hasLimit) this.send("setoption name UCI_LimitStrength value false");
       if (this.opts.has("Skill Level")) this.send(`setoption name Skill Level value ${lv.skill}`);
     }
+
+    if (this.opts.has("Contempt")) {
+      const opt = this.opts.get("Contempt")!;
+      let cVal = 0;
+      if (styleId === "aggressive") cVal = Math.min(opt.max ?? 100, 100);
+      else if (styleId === "defensive") cVal = Math.max(opt.min ?? -100, -100);
+      this.send(`setoption name Contempt value ${cVal}`);
+    }
+
     this.send("ucinewgame");
     await this.ready();
   }

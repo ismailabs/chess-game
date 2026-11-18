@@ -41,8 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session, user: session?.user ?? null, loading, authError,
     signIn: async () => {
       setAuthError(null);
+      const redirectOrigin = window.location.origin.includes("localhost")
+        ? window.location.origin
+        : "https://chess.ismailstudio.my";
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google", options: { redirectTo: window.location.origin },
+        provider: "google", options: { redirectTo: redirectOrigin },
       });
       if (error) setAuthError(error.message);
     },

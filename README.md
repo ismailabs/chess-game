@@ -37,7 +37,8 @@ npx supabase functions deploy game-action --project-ref fhlpgtkftfhqcgppfnud --n
 ## 4. Auth redirect URLs (Supabase → Authentication → URL Configuration → Redirect URLs)
 Add only these (the Google provider itself is untouched):
 - `http://localhost:5173/**`
-- `https://<your-vercel-domain>/**` (add your production domain; also `https://*-<team>.vercel.app/**` if you want preview deployments)
+- `https://chess.ismailstudio.my/**`
+- `https://*-<team>.vercel.app/**` (for preview deployments)
 
 ## 5. Vercel
 Framework preset: Vite. Build command `npm run build`, output directory `dist`. Environment variables (Production + Preview):

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Chess, type Square } from "chess.js";
-import { Chessboard } from "react-chessboard"; // react-chessboard v5 "options" API
+import { Chessboard } from "react-chessboard";
+import { playCaptureSound, playCastleSound, playCheckSound, playMoveSound } from "../lib/sounds";
 import type { Side } from "../lib/types";
 
 interface Props {
@@ -26,11 +27,19 @@ export default function Board({ fen, orientation, myColor, interactive, lastMove
   const canMove = interactive && !!myColor && chess.turn() === myColor;
   const legal = useMemo(() => (sel ? chess.moves({ square: sel as Square, verbose: true }) : []), [sel, chess]);
 
+  function triggerMoveAudio(m: { captured?: string; san: string }) {
+    if (m.captured) playCaptureSound();
+    else if (m.san.startsWith("O-O")) playCastleSound();
+    else if (m.san.includes("+") || m.san.includes("#")) playCheckSound();
+    else playMoveSound();
+  }
+
   function attempt(from: string, to: string): boolean {
     const cands = chess.moves({ square: from as Square, verbose: true }).filter((m) => m.to === to);
     if (!cands.length) return false;
     if (cands.some((m) => m.promotion)) { setPromo({ from, to }); return false; }
     setSel(null);
+    triggerMoveAudio(cands[0]);
     onMove(from + to);
     return true;
   }
@@ -38,11 +47,14 @@ export default function Board({ fen, orientation, myColor, interactive, lastMove
   const squareStyles = useMemo(() => {
     const s: Record<string, CSSProperties> = {};
     const add = (sq: string, st: CSSProperties) => { s[sq] = { ...s[sq], ...st }; };
-    if (lastMove) { add(lastMove.from, { backgroundColor: "rgba(205,190,90,.45)" }); add(lastMove.to, { backgroundColor: "rgba(205,190,90,.55)" }); }
+    if (lastMove) {
+      add(lastMove.from, { backgroundColor: "rgba(205,190,90,.45)" });
+      add(lastMove.to, { backgroundColor: "rgba(205,190,90,.55)" });
+    }
     if (sel) add(sel, { backgroundColor: "rgba(77,122,89,.6)" });
     if (chess.inCheck()) {
       const k = kingSquare(chess, chess.turn());
-      if (k) add(k, { backgroundImage: "radial-gradient(circle, rgba(168,69,59,.9) 0%, rgba(168,69,59,0) 70%)" });
+      if (k) add(k, { backgroundImage: "radial-gradient(circle, rgba(200,50,50,.85) 0%, rgba(200,50,50,0) 70%)" });
     }
     for (const m of legal) {
       const capture = !!m.captured || m.flags.includes("e");
@@ -78,7 +90,7 @@ export default function Board({ fen, orientation, myColor, interactive, lastMove
   const glyph: Record<string, string> = { q: "♕ Queen", r: "♖ Rook", b: "♗ Bishop", n: "♘ Knight" };
 
   return (
-    <div className="relative" role="group" aria-label="Chess board">
+    <div className="relative touch-manipulation" role="group" aria-label="Chess board">
       <Chessboard options={options} />
       {promo && (
         <div role="dialog" aria-label="Choose promotion piece"
@@ -87,7 +99,13 @@ export default function Board({ fen, orientation, myColor, interactive, lastMove
             <p className="mb-3 text-sm font-medium">Promote to</p>
             <div className="grid grid-cols-2 gap-2">
               {(["q", "r", "b", "n"] as const).map((p) => (
-                <button key={p} className="btn" onClick={() => { const { from, to } = promo; setPromo(null); setSel(null); onMove(from + to + p); }}>
+                <button key={p} className="btn" onClick={() => {
+                  const { from, to } = promo;
+                  setPromo(null);
+                  setSel(null);
+                  playMoveSound();
+                  onMove(from + to + p);
+                }}>
                   {glyph[p]}
                 </button>
               ))}

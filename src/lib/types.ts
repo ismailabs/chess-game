@@ -22,3 +22,47 @@ export interface MoveRow {
   game_id: string; ply: number; player_id: string | null;
   san: string; uci: string; fen: string; white_ms: number; black_ms: number; created_at?: string;
 }
+
+export interface Profile {
+  id: string;
+  username: string;
+  display_name: string;
+  email?: string | null;
+  avatar_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Friendship {
+  id: string;
+  user_id: string;
+  friend_id: string;
+  status: "pending" | "accepted" | "blocked";
+  created_at: string;
+  updated_at: string;
+  friend_profile?: Profile;
+}
+
+export interface GameInvite {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  tc: string;
+  initial_ms: number;
+  increment_ms: number;
+  color_preference: "w" | "b" | "random";
+  status: "pending" | "accepted" | "declined" | "cancelled" | "expired";
+  game_id?: string | null;
+  created_at: string;
+  expires_at: string;
+  sender_profile?: Profile;
+}
+
+export type OnlineStatus = "online" | "in-game" | "offline";
+
+export interface UserPresence {
+  user_id: string;
+  status: "online" | "in-game";
+  game_id?: string | null;
+  updated_at?: string;
+}

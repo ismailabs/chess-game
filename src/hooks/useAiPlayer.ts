@@ -30,7 +30,8 @@ export function useAiPlayer(game: Game, submit: (uci: string) => Promise<boolean
         if (!entry) throw new Error(`Engine "${game.ai_engine}" is not bundled in this build.`);
         const eng = await UciEngine.load(entry);
         if (dead) { eng.dispose(); return; }
-        await eng.configure(game.ai_level ?? 3);
+        const savedStyle = sessionStorage.getItem(`game_style_${game.id}`) ?? undefined;
+        await eng.configure(game.ai_level ?? 3, savedStyle);
         if (dead) { eng.dispose(); return; }
         engineRef.current = eng;
         setReady(true);
