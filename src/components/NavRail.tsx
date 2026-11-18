@@ -6,6 +6,7 @@ import {
   Settings as SettingsIcon,
   Swords,
   Trophy,
+  User,
   Users,
   Volume2,
   VolumeX,
@@ -43,13 +44,14 @@ export default function NavRail({
     { to: "/bots", key: "bots", label: "Play Bots", icon: Bot },
     { to: "/leaderboard", key: "leaderboard", label: "Leaderboard", icon: Trophy },
     { to: "/history", key: "history", label: "Game History", icon: HistoryIcon },
+    ...(user ? [{ to: "/profile", key: "profile", label: "Profile", icon: User }] : []),
     { to: "/settings", key: "settings", label: "Settings", icon: SettingsIcon },
   ];
 
   return (
     <aside
       aria-label="Sidebar navigation"
-      className="hidden md:flex w-56 lg:w-64 shrink-0 flex-col justify-between border-r border-[var(--outline)] bg-[var(--surface)] p-4 text-[var(--on-surface)] select-none z-30 transition-colors"
+      className="hidden md:flex w-56 lg:w-64 shrink-0 flex-col justify-between border-r border-[var(--outline)] bg-[var(--surface)] p-4 text-[var(--on-surface)] select-none z-30 transition-colors sticky top-0 h-dvh overflow-y-auto scrollbar-thin"
     >
       {/* Top: Logo & Main Navigation */}
       <div className="space-y-6">
