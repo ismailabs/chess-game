@@ -23,7 +23,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = "" }) => {
           className={`absolute transition-all duration-300 ease-[var(--ease-spring-default)] ${
             resolved === "light"
               ? "opacity-100 rotate-0 scale-100 text-amber-500"
-              : "opacity-0 rotate-90 scale-50 text-stone-400"
+              : "opacity-0 rotate-90 scale-50 text-[var(--on-surface-variant)]"
           }`}
         />
         <Moon
@@ -31,7 +31,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = "" }) => {
           className={`absolute transition-all duration-300 ease-[var(--ease-spring-default)] ${
             resolved === "dark"
               ? "opacity-100 rotate-0 scale-100 text-sky-400"
-              : "opacity-0 -rotate-90 scale-50 text-stone-400"
+              : "opacity-0 -rotate-90 scale-50 text-[var(--on-surface-variant)]"
           }`}
         />
       </div>

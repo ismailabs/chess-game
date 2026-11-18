@@ -46,11 +46,11 @@ export default function Clock({
       aria-label={`${color === "w" ? "White" : "Black"} clock`}
       className={`rounded-lg px-2.5 py-1 font-mono text-base sm:text-lg font-bold tabular-nums transition-all duration-150 ${
         toMove
-          ? "bg-[#383632] text-white border border-white/20 shadow-sm"
-          : "bg-[#1d1c1a] text-stone-400 border border-transparent"
+          ? "bg-[var(--surface-container-high)] text-[var(--on-surface)] border border-[var(--outline)] shadow-sm"
+          : "bg-[var(--surface-container)] text-[var(--on-surface-variant)] border border-transparent opacity-85"
       } ${
         isLowTime
-          ? "!bg-red-950 !text-red-400 !border-red-600 animate-pulse"
+          ? "!bg-red-500/20 !text-red-500 !border-red-500 animate-pulse"
           : ""
       }`}
     >

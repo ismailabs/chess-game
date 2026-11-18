@@ -91,15 +91,15 @@ export default function CapturedPieces({ fen, side }: Props) {
   const oppColor = side === "w" ? "b" : "w";
 
   return (
-    <div className="flex items-center gap-1.5 text-xs text-stone-400 select-none">
+    <div className="flex items-center gap-1.5 text-xs text-[var(--on-surface-variant)] select-none">
       <div className="flex items-center tracking-tighter">
         {capturedPieces.map(({ type, count }) => {
           const glyph = oppColor === "w" ? PIECE_ICONS[type].w : PIECE_ICONS[type].b;
           return (
             <span
               key={type}
-              className={`text-sm leading-none opacity-80 ${
-                oppColor === "w" ? "text-stone-300" : "text-stone-600 drop-shadow-[0_0_1px_rgba(255,255,255,0.4)]"
+              className={`text-sm leading-none ${
+                oppColor === "w" ? "opacity-75" : "opacity-95"
               }`}
               title={`${count} captured ${type}`}
             >
@@ -109,7 +109,7 @@ export default function CapturedPieces({ fen, side }: Props) {
         })}
       </div>
       {advantage && (
-        <span className="rounded bg-white/10 px-1 py-0.2 text-[10px] font-bold text-stone-200 tabular-nums">
+        <span className="rounded bg-[var(--surface-container-high)] px-1 py-0.2 text-[10px] font-bold text-[var(--on-surface)] tabular-nums border border-[var(--outline)]">
           {advantage}
         </span>
       )}
