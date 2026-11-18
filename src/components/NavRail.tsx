@@ -22,8 +22,9 @@ interface Props {
   user: {
     name: string;
     avatar?: string;
-  };
+  } | null;
   onSignOut: () => void;
+  onSignIn?: () => void;
 }
 
 export default function NavRail({
@@ -34,6 +35,7 @@ export default function NavRail({
   onToggleMute,
   user,
   onSignOut,
+  onSignIn,
 }: Props) {
   const navItems = [
     { to: "/", key: "home", label: "Home", icon: HomeIcon },
@@ -47,7 +49,7 @@ export default function NavRail({
   return (
     <aside
       aria-label="Sidebar navigation"
-      className="hidden md:flex w-56 lg:w-64 shrink-0 flex-col justify-between border-r border-white/10 bg-[#262522] p-4 text-stone-100 select-none z-30"
+      className="hidden md:flex w-56 lg:w-64 shrink-0 flex-col justify-between border-r border-[var(--outline)] bg-[var(--surface)] p-4 text-[var(--on-surface)] select-none z-30 transition-colors"
     >
       {/* Top: Logo & Main Navigation */}
       <div className="space-y-6">
@@ -57,10 +59,10 @@ export default function NavRail({
             <img src="/logo.svg" alt="Chess Logo" className="size-full" />
           </div>
           <div className="min-w-0">
-            <span className="block font-extrabold text-base tracking-tight text-stone-100 font-heading">
+            <span className="block font-extrabold text-base tracking-tight text-[var(--on-surface)] font-heading">
               Chess
             </span>
-            <span className="block text-[11px] font-medium text-[#81b64c] tracking-wide uppercase">
+            <span className="block text-[11px] font-medium text-[var(--primary)] tracking-wide uppercase">
               Ismail Studio
             </span>
           </div>
@@ -80,14 +82,14 @@ export default function NavRail({
                 to={item.to}
                 className={`group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-150 ${
                   isActive
-                    ? "bg-[#81b64c] text-white shadow-[0_3px_0_#537a2e]"
-                    : "text-stone-300 hover:bg-white/5 hover:text-white"
+                    ? "bg-[var(--primary)] text-[var(--on-primary)] shadow-[0_3px_0_#537a2e]"
+                    : "text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
                 }`}
               >
                 <Icon
                   size={19}
                   className={`shrink-0 transition-transform group-hover:scale-110 ${
-                    isActive ? "text-white" : "text-stone-400 group-hover:text-stone-200"
+                    isActive ? "text-[var(--on-primary)]" : "text-[var(--on-surface-variant)] group-hover:text-[var(--on-surface)]"
                   }`}
                 />
                 <span className="truncate">{item.label}</span>
@@ -95,86 +97,100 @@ export default function NavRail({
             );
           })}
 
-          {/* Friends & Social Button with live online count */}
-          <button
-            type="button"
-            onClick={onOpenFriends}
-            className="group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-semibold text-stone-300 hover:bg-white/5 hover:text-white transition-all duration-150"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <Users
-                size={19}
-                className="shrink-0 text-stone-400 group-hover:text-[#81b64c] transition-colors"
-              />
-              <span className="truncate">Friends</span>
-            </div>
-            {onlineFriendsCount > 0 && (
-              <span className="flex items-center gap-1 rounded-full bg-[#81b64c]/20 px-2 py-0.5 text-xs font-bold text-[#81b64c]">
-                <span className="size-1.5 rounded-full bg-[#81b64c] animate-pulse" />
-                {onlineFriendsCount}
-              </span>
-            )}
-          </button>
+          {/* Friends & Social Button with live online count (when signed in) */}
+          {user && (
+            <button
+              type="button"
+              onClick={onOpenFriends}
+              className="group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-semibold text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)] transition-all duration-150 cursor-pointer"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <Users
+                  size={19}
+                  className="shrink-0 text-[var(--on-surface-variant)] group-hover:text-[var(--primary)] transition-colors"
+                />
+                <span className="truncate">Friends</span>
+              </div>
+              {onlineFriendsCount > 0 && (
+                <span className="flex items-center gap-1 rounded-full bg-[var(--primary)]/20 px-2 py-0.5 text-xs font-bold text-[var(--primary)]">
+                  <span className="size-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
+                  {onlineFriendsCount}
+                </span>
+              )}
+            </button>
+          )}
         </nav>
       </div>
 
-      {/* Bottom: Sound Toggle & User Profile Card */}
-      <div className="space-y-3 pt-4 border-t border-white/10">
-        {/* Sound toggle button */}
+      {/* Bottom: Sound Toggle & User Profile Card / Sign In CTA */}
+      <div className="space-y-3 pt-4 border-t border-[var(--outline)]">
+        {/* Theme toggle control */}
         <div className="flex items-center justify-between px-2 py-1">
-          <span className="text-xs font-medium text-stone-400">Theme</span>
+          <span className="text-xs font-medium text-[var(--on-surface-variant)]">Theme</span>
           <ThemeToggle />
         </div>
 
+        {/* Sound toggle button */}
         <button
           type="button"
           onClick={onToggleMute}
-          className="flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-xs font-medium text-stone-400 hover:bg-white/5 hover:text-stone-200 transition-colors"
+          className="flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-xs font-medium text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)] transition-colors cursor-pointer"
           title={muted ? "Unmute game sounds" : "Mute game sounds"}
         >
           <span className="flex items-center gap-2">
             {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
             <span>Sound Effects</span>
           </span>
-          <span className="font-mono text-[11px] text-stone-400">{muted ? "OFF" : "ON"}</span>
+          <span className="font-mono text-[11px] text-[var(--on-surface-variant)]">{muted ? "OFF" : "ON"}</span>
         </button>
 
-        {/* User Profile Capsule (clicks to /profile) */}
-        <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-[#302e2b] p-2.5 shadow-md">
-          <button
-            type="button"
-            onClick={() => navigate("/profile")}
-            className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-85 transition-opacity"
-            title="View Profile"
-          >
-            {user.avatar ? (
-              <img
-                src={user.avatar}
-                alt=""
-                referrerPolicy="no-referrer"
-                className="size-9 rounded-full ring-2 ring-white/10 shrink-0 object-cover"
-              />
-            ) : (
-              <span className="grid size-9 place-items-center rounded-full bg-[#383632] text-sm font-bold text-stone-200 shrink-0">
-                {user.name[0]?.toUpperCase()}
-              </span>
-            )}
-            <div className="min-w-0">
-              <div className="truncate text-xs font-bold text-stone-100">{user.name}</div>
-              <div className="truncate text-[10px] text-[#81b64c]">View Profile</div>
-            </div>
-          </button>
+        {/* User Profile Capsule or Sign In button */}
+        {user ? (
+          <div className="flex items-center justify-between gap-2 rounded-2xl border border-[var(--outline)] bg-[var(--surface-container)] p-2.5 shadow-md">
+            <button
+              type="button"
+              onClick={() => navigate("/profile")}
+              className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-85 transition-opacity cursor-pointer"
+              title="View Profile"
+            >
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="size-9 rounded-full ring-2 ring-[var(--outline)] shrink-0 object-cover"
+                />
+              ) : (
+                <span className="grid size-9 place-items-center rounded-full bg-[var(--surface-container-high)] text-sm font-bold text-[var(--on-surface)] shrink-0">
+                  {user.name[0]?.toUpperCase()}
+                </span>
+              )}
+              <div className="min-w-0">
+                <div className="truncate text-xs font-bold text-[var(--on-surface)]">{user.name}</div>
+                <div className="truncate text-[10px] text-[var(--primary)] font-semibold">View Profile</div>
+              </div>
+            </button>
 
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="rounded-lg p-2 text-[var(--on-surface-variant)] hover:bg-red-500/10 hover:text-red-400 transition-colors shrink-0 cursor-pointer"
+              title="Sign out"
+              aria-label="Sign out"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        ) : (
           <button
             type="button"
-            onClick={onSignOut}
-            className="rounded-lg p-2 text-stone-400 hover:bg-red-500/10 hover:text-red-400 transition-colors shrink-0"
-            title="Sign out"
-            aria-label="Sign out"
+            onClick={onSignIn}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-3 py-2.5 text-xs font-bold text-[var(--on-primary)] shadow-md hover:bg-[var(--primary-hover)] transition-all cursor-pointer"
           >
-            <LogOut size={16} />
+            <img src="/google-logo.svg" alt="" className="size-4 shrink-0" />
+            <span>Sign in with Google</span>
           </button>
-        </div>
+        )}
       </div>
     </aside>
   );

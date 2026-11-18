@@ -46,27 +46,27 @@ export default function LoginShowcase({ onSignIn, authError, onGuestPlay }: Prop
     : {};
 
   return (
-    <div className="relative min-h-dvh flex items-center justify-center p-4 sm:p-6 lg:p-12 overflow-hidden bg-[#1d1c1a]">
+    <div className="relative min-h-[calc(100vh-8rem)] flex items-center justify-center p-4 sm:p-6 lg:p-10 overflow-hidden bg-[var(--bg)] text-[var(--on-surface)] transition-colors">
       {/* Subtle ambient lighting */}
-      <div className="pointer-events-none absolute -top-40 -left-40 size-96 rounded-full bg-[#81b64c]/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -right-40 size-96 rounded-full bg-[#e5b84b]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -top-40 -left-40 size-96 rounded-full bg-[var(--primary)]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -right-40 size-96 rounded-full bg-[var(--tertiary)]/10 blur-3xl" />
 
       <div className="relative z-10 mx-auto w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
         {/* Left Column: Headline, Live Demo Board & Value Points */}
         <div className="lg:col-span-7 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6">
           <div className="space-y-3">
-            <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-stone-100 font-heading">
+            <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-[var(--on-surface)] font-heading">
               Play chess. <br className="hidden sm:inline" />
-              <span className="text-[#81b64c]">Get better.</span>
+              <span className="text-[var(--primary)]">Get better.</span>
             </h1>
-            <p className="max-w-xl text-base sm:text-lg text-stone-400 font-medium">
+            <p className="max-w-xl text-base sm:text-lg text-[var(--on-surface-variant)] font-medium">
               Challenge friends, beat bots at your level, and climb the ladder.
             </p>
           </div>
 
-          {/* Quietly Animating Classic Board (Solid Surface Bezel per Law §2.2) */}
-          <div className="bg-[#262522] border border-white/10 rounded-2xl p-3 sm:p-4 shadow-xl max-w-[360px] sm:max-w-[400px] w-full">
-            <div className="rounded-xl overflow-hidden border border-white/10">
+          {/* Quietly Animating Classic Board */}
+          <div className="bg-[var(--surface)] border border-[var(--outline)] rounded-2xl p-3 sm:p-4 shadow-xl max-w-[360px] sm:max-w-[400px] w-full">
+            <div className="rounded-xl overflow-hidden border border-[var(--outline)]">
               <Chessboard
                 options={{
                   id: "showcase-board",
@@ -80,52 +80,69 @@ export default function LoginShowcase({ onSignIn, authError, onGuestPlay }: Prop
                 }}
               />
             </div>
-            <div className="mt-2.5 flex items-center justify-between px-2 text-xs font-mono text-stone-400">
+            <div className="mt-2.5 flex items-center justify-between px-2 text-xs font-mono text-[var(--on-surface-variant)]">
               <span className="flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-[#81b64c]" />
+                <span className="size-2 rounded-full bg-[var(--primary)]" />
                 Opera Game (1858)
               </span>
-              <span className="font-semibold text-stone-300">{cur.label}</span>
+              <span className="font-semibold text-[var(--on-surface)]">{cur.label}</span>
             </div>
           </div>
 
-          {/* Three Short Value Points (No Jargon) */}
+          {/* Three Short Value Points (Clickable Cards) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl text-left">
-            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#262522] p-3 shadow-sm">
-              <div className="grid size-10 place-items-center rounded-xl bg-[#81b64c]/15 text-[#81b64c] shrink-0">
+            <button
+              type="button"
+              onClick={onSignIn}
+              className="flex items-center gap-3 rounded-2xl border border-[var(--outline)] bg-[var(--surface)] p-3 shadow-sm hover:border-[var(--primary)]/50 hover:bg-[var(--surface-container-high)] transition-all cursor-pointer text-left"
+            >
+              <div className="grid size-10 place-items-center rounded-xl bg-[var(--primary)]/15 text-[var(--primary)] shrink-0">
                 <Swords size={20} />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-bold text-stone-100 truncate">Play friends</div>
-                <div className="text-[11px] text-stone-400 truncate">Live invites & presence</div>
+                <div className="text-xs font-bold text-[var(--on-surface)] truncate">Play friends</div>
+                <div className="text-[11px] text-[var(--on-surface-variant)] truncate">Live invites & presence</div>
               </div>
-            </div>
+            </button>
 
-            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#262522] p-3 shadow-sm">
-              <div className="grid size-10 place-items-center rounded-xl bg-[#e5b84b]/15 text-[#e5b84b] shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                if (onGuestPlay) onGuestPlay();
+                else navigate("/bots");
+              }}
+              className="flex items-center gap-3 rounded-2xl border border-[var(--outline)] bg-[var(--surface)] p-3 shadow-sm hover:border-[var(--tertiary)]/50 hover:bg-[var(--surface-container-high)] transition-all cursor-pointer text-left"
+              title="Browse all 14 bots"
+            >
+              <div className="grid size-10 place-items-center rounded-xl bg-[var(--tertiary)]/15 text-[var(--tertiary)] shrink-0">
                 <Bot size={20} />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-bold text-stone-100 truncate">14 bots</div>
-                <div className="text-[11px] text-stone-400 truncate">From 250 to 3000+</div>
+                <div className="text-xs font-bold text-[var(--on-surface)] truncate">14 bots</div>
+                <div className="text-[11px] text-[var(--on-surface-variant)] truncate">From 250 to 3000+</div>
               </div>
-            </div>
+            </button>
 
-            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#262522] p-3 shadow-sm">
+            <button
+              type="button"
+              onClick={() => navigate("/leaderboard")}
+              className="flex items-center gap-3 rounded-2xl border border-[var(--outline)] bg-[var(--surface)] p-3 shadow-sm hover:border-sky-500/50 hover:bg-[var(--surface-container-high)] transition-all cursor-pointer text-left"
+              title="View Leaderboard"
+            >
               <div className="grid size-10 place-items-center rounded-xl bg-sky-500/15 text-sky-400 shrink-0">
                 <TrendingUp size={20} />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-bold text-stone-100 truncate">Elo rating</div>
-                <div className="text-[11px] text-stone-400 truncate">Progress tracking</div>
+                <div className="text-xs font-bold text-[var(--on-surface)] truncate">Elo rating</div>
+                <div className="text-[11px] text-[var(--on-surface-variant)] truncate">Progress tracking</div>
               </div>
-            </div>
+            </button>
           </div>
         </div>
 
-        {/* Right Column: Liquid Glass Auth Card */}
+        {/* Right Column: Glass Auth Card */}
         <div className="lg:col-span-5 flex justify-center">
-          <div className="liquid-glass w-full max-w-md rounded-3xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
+          <div className="glass w-full max-w-md rounded-3xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden border border-[var(--outline)]">
             <div className="mx-auto mb-4 size-16 sm:size-20 flex items-center justify-center">
               <img
                 src="/logo.svg"
@@ -134,11 +151,11 @@ export default function LoginShowcase({ onSignIn, authError, onGuestPlay }: Prop
               />
             </div>
 
-            <h2 className="mb-2 text-2xl sm:text-3xl font-black tracking-tight text-stone-100 font-heading">
+            <h2 className="mb-2 text-2xl sm:text-3xl font-black tracking-tight text-[var(--on-surface)] font-heading">
               Welcome
             </h2>
 
-            <p className="mb-8 text-sm text-stone-400 font-medium">
+            <p className="mb-8 text-sm text-[var(--on-surface-variant)] font-medium">
               Sign in to save your rating, compete on the leaderboard, and challenge friends.
             </p>
 
@@ -146,7 +163,7 @@ export default function LoginShowcase({ onSignIn, authError, onGuestPlay }: Prop
               <button
                 onClick={onSignIn}
                 type="button"
-                className="group relative flex w-full items-center justify-center gap-3.5 rounded-xl border border-white/20 bg-white py-3.5 px-5 font-semibold text-stone-900 shadow-xl transition-all duration-150 hover:bg-stone-100 hover:shadow-2xl active:scale-[0.98] cursor-pointer"
+                className="group relative flex w-full items-center justify-center gap-3.5 rounded-xl border border-stone-200 dark:border-white/20 bg-white py-3.5 px-5 font-semibold text-stone-900 shadow-xl transition-all duration-150 hover:bg-stone-100 hover:shadow-2xl active:scale-[0.98] cursor-pointer"
               >
                 <img src="/google-logo.svg" alt="" className="size-5 shrink-0" />
                 <span className="text-sm sm:text-base font-bold tracking-tight">
@@ -156,7 +173,7 @@ export default function LoginShowcase({ onSignIn, authError, onGuestPlay }: Prop
 
               <Button
                 variant="outlined"
-                className="w-full text-stone-300 border-white/15 hover:bg-white/5"
+                className="w-full text-[var(--on-surface)] border-[var(--outline)] hover:bg-[var(--surface-container)] font-semibold"
                 onClick={() => {
                   if (onGuestPlay) onGuestPlay();
                   else navigate("/bots");
@@ -169,20 +186,20 @@ export default function LoginShowcase({ onSignIn, authError, onGuestPlay }: Prop
             {authError && (
               <div
                 role="alert"
-                className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs font-medium text-red-300"
+                className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs font-medium text-red-400"
               >
                 {authError}
               </div>
             )}
 
-            <div className="mt-8 border-t border-white/10 pt-4 text-[11px] text-stone-400 flex items-center justify-center gap-4">
+            <div className="mt-8 border-t border-[var(--outline)] pt-4 text-[11px] text-[var(--on-surface-variant)] flex items-center justify-center gap-4">
               <span>Engine by Stockfish</span>
               <span>•</span>
               <a
                 href="https://www.gnu.org/licenses/gpl-3.0.html"
                 target="_blank"
                 rel="noreferrer"
-                className="text-stone-400 hover:text-stone-200 underline"
+                className="text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] underline"
               >
                 GPL-3.0
               </a>
