@@ -3,6 +3,7 @@ import { Chess, type Square } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { playCaptureSound, playCastleSound, playCheckSound, playMoveSound } from "../lib/sounds";
 import { triggerHaptic } from "../lib/haptics";
+import { Button } from "./ui";
 import type { Side } from "../lib/types";
 
 interface Props {
@@ -257,11 +258,11 @@ export default function Board({
 
   return (
     <div
-      className="relative touch-manipulation bg-[#262522] border border-white/10 p-1.5 sm:p-2 rounded-2xl shadow-xl transition-colors"
+      className="relative touch-manipulation bg-[var(--surface-container)] border border-[var(--outline)] p-1.5 sm:p-2 rounded-2xl shadow-xl transition-colors"
       role="group"
       aria-label="Interactive chess board"
     >
-      <div className="rounded-xl overflow-hidden border border-white/10">
+      <div className="rounded-xl overflow-hidden border border-[var(--outline)]">
         <Chessboard options={options} />
       </div>
 
@@ -270,18 +271,19 @@ export default function Board({
         <div
           role="dialog"
           aria-label="Choose promotion piece"
-          className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-black/70 backdrop-blur-sm animate-in fade-in duration-150"
+          className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
         >
-          <div className="bg-[#262522] rounded-2xl border border-white/15 p-5 shadow-2xl max-w-xs w-full text-center">
-            <p className="mb-3 text-sm font-bold text-stone-100 font-heading">
+          <div className="bg-[var(--surface)] rounded-2xl border border-[var(--outline)] p-5 shadow-2xl max-w-xs w-full text-center">
+            <p className="mb-3 text-sm font-bold text-[var(--on-surface)] font-heading">
               Promote Pawn To
             </p>
             <div className="grid grid-cols-2 gap-2">
               {(["q", "r", "b", "n"] as const).map((p) => (
-                <button
+                <Button
                   key={p}
-                  type="button"
-                  className="btn btn-primary !py-2 font-bold"
+                  variant="filled"
+                  size="sm"
+                  className="!py-2 font-bold"
                   onClick={() => {
                     const { from, to } = promo;
                     setPromo(null);
@@ -292,19 +294,20 @@ export default function Board({
                   }}
                 >
                   {glyph[p]}
-                </button>
+                </Button>
               ))}
             </div>
-            <button
-              type="button"
-              className="btn btn-ghost mt-3 w-full text-xs text-stone-400"
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-3 w-full text-xs text-[var(--on-surface-variant)]"
               onClick={() => {
                 setPromo(null);
                 triggerHaptic("light");
               }}
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}

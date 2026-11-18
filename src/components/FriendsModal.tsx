@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Check, Search, Swords, UserMinus, UserPlus, Users, X } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { errMsg } from "../lib/format";
+import { Button } from "./ui";
 import type { Friendship, OnlineStatus, Profile } from "../lib/types";
 
 interface Props {
@@ -168,20 +169,20 @@ export default function FriendsModal({
     <div
       role="dialog"
       aria-label="Friends & Social"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150"
     >
-      <div className="flex h-[38rem] w-full max-w-lg flex-col rounded-3xl border border-white/15 bg-[#262522] text-stone-100 shadow-2xl overflow-hidden">
+      <div className="flex h-[38rem] w-full max-w-lg flex-col rounded-3xl border border-[var(--outline)] bg-[var(--surface)] text-[var(--on-surface)] shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4 bg-[#302e2b]">
+        <div className="flex items-center justify-between border-b border-[var(--outline)] px-6 py-4 bg-[var(--surface-container)]">
           <div className="flex items-center gap-2.5">
-            <div className="grid size-8 place-items-center rounded-lg bg-[#81b64c]/20 text-[#81b64c]">
+            <div className="grid size-8 place-items-center rounded-lg bg-[var(--primary)]/20 text-[var(--primary)]">
               <Users size={18} />
             </div>
-            <h2 className="text-lg font-bold font-heading text-stone-100">Friends & Social</h2>
+            <h2 className="text-lg font-bold font-heading text-[var(--on-surface)]">Friends & Social</h2>
           </div>
           <button
             type="button"
-            className="rounded-lg p-1.5 text-stone-400 hover:bg-white/10 hover:text-white transition-colors"
+            className="rounded-lg p-1.5 text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)] transition-colors cursor-pointer"
             onClick={onClose}
             aria-label="Close dialog"
           >
@@ -190,14 +191,14 @@ export default function FriendsModal({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-white/10 bg-[#1e1d1b] px-6 text-sm font-semibold">
+        <div className="flex border-b border-[var(--outline)] bg-[var(--surface-container-low)] px-6 text-sm font-semibold">
           <button
             type="button"
             onClick={() => setTab("friends")}
-            className={`border-b-2 py-3 px-3 transition-colors ${
+            className={`border-b-2 py-3 px-3 transition-colors cursor-pointer ${
               tab === "friends"
-                ? "border-[#81b64c] text-[#81b64c]"
-                : "border-transparent text-stone-400 hover:text-stone-200"
+                ? "border-[var(--primary)] text-[var(--primary)]"
+                : "border-transparent text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
             }`}
           >
             Friends ({friends.length})
@@ -205,15 +206,15 @@ export default function FriendsModal({
           <button
             type="button"
             onClick={() => setTab("requests")}
-            className={`relative border-b-2 py-3 px-3 transition-colors ${
+            className={`relative border-b-2 py-3 px-3 transition-colors cursor-pointer ${
               tab === "requests"
-                ? "border-[#81b64c] text-[#81b64c]"
-                : "border-transparent text-stone-400 hover:text-stone-200"
+                ? "border-[var(--primary)] text-[var(--primary)]"
+                : "border-transparent text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
             }`}
           >
             Requests
             {pendingIn.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-[#81b64c] px-1.5 py-0.2 text-[10px] font-bold text-white">
+              <span className="ml-1.5 rounded-full bg-[var(--primary)] px-1.5 py-0.2 text-[10px] font-bold text-white">
                 {pendingIn.length}
               </span>
             )}
@@ -221,10 +222,10 @@ export default function FriendsModal({
           <button
             type="button"
             onClick={() => setTab("search")}
-            className={`border-b-2 py-3 px-3 transition-colors ${
+            className={`border-b-2 py-3 px-3 transition-colors cursor-pointer ${
               tab === "search"
-                ? "border-[#81b64c] text-[#81b64c]"
-                : "border-transparent text-stone-400 hover:text-stone-200"
+                ? "border-[var(--primary)] text-[var(--primary)]"
+                : "border-transparent text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
             }`}
           >
             Find Players
@@ -235,7 +236,7 @@ export default function FriendsModal({
         <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
           {error && (
             <div
-              className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300"
+              className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-500"
               role="alert"
             >
               {error}
@@ -246,26 +247,26 @@ export default function FriendsModal({
           {tab === "friends" && (
             <div>
               {loading ? (
-                <p className="py-12 text-center text-sm text-stone-400">Loading friends…</p>
+                <p className="py-12 text-center text-sm text-[var(--on-surface-variant)]">Loading friends…</p>
               ) : friends.length === 0 ? (
                 <div className="py-12 text-center">
-                  <div className="mx-auto mb-3 grid size-12 place-items-center rounded-2xl bg-white/5 text-stone-500">
+                  <div className="mx-auto mb-3 grid size-12 place-items-center rounded-2xl bg-[var(--surface-container)] text-[var(--on-surface-variant)]">
                     <Users size={24} />
                   </div>
-                  <p className="font-bold text-stone-200 font-heading">No friends added yet</p>
-                  <p className="mt-1 text-xs text-stone-400 max-w-xs mx-auto">
+                  <p className="font-bold text-[var(--on-surface)] font-heading">No friends added yet</p>
+                  <p className="mt-1 text-xs text-[var(--on-surface-variant)] max-w-xs mx-auto">
                     Search for players by username or email to send challenge invites.
                   </p>
-                  <button
-                    type="button"
-                    className="btn btn-primary mt-4"
+                  <Button
+                    variant="filled"
+                    className="mt-4"
                     onClick={() => setTab("search")}
                   >
                     <Search size={14} /> Find Players
-                  </button>
+                  </Button>
                 </div>
               ) : (
-                <ul className="divide-y divide-white/10">
+                <ul className="divide-y divide-[var(--outline)]">
                   {friends.map((f) => {
                     const profile = f.friend_profile;
                     if (!profile) return null;
@@ -282,18 +283,18 @@ export default function FriendsModal({
                               <img
                                 src={profile.avatar_url}
                                 alt=""
-                                className="size-10 rounded-xl object-cover border border-white/10"
+                                className="size-10 rounded-xl object-cover border border-[var(--outline)]"
                               />
                             ) : (
-                              <span className="grid size-10 place-items-center rounded-xl bg-[#383632] font-bold text-stone-200 text-sm">
+                              <span className="grid size-10 place-items-center rounded-xl bg-[var(--surface-container-high)] font-bold text-[var(--on-surface)] text-sm">
                                 {profile.display_name[0]?.toUpperCase()}
                               </span>
                             )}
                             <span
                               title={`Status: ${st}`}
-                              className={`absolute -bottom-1 -right-1 size-3 rounded-full border-2 border-[#262522] ${
+                              className={`absolute -bottom-1 -right-1 size-3 rounded-full border-2 border-[var(--surface)] ${
                                 st === "online"
-                                  ? "bg-[#81b64c]"
+                                  ? "bg-[var(--primary)]"
                                   : st === "in-game"
                                   ? "bg-amber-400 animate-pulse"
                                   : "bg-stone-500"
@@ -302,16 +303,16 @@ export default function FriendsModal({
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-bold text-stone-100">
+                            <div className="truncate text-sm font-bold text-[var(--on-surface)]">
                               {profile.display_name}
                             </div>
-                            <div className="flex items-center gap-1.5 text-xs text-stone-400">
+                            <div className="flex items-center gap-1.5 text-xs text-[var(--on-surface-variant)]">
                               <span className="truncate">@{profile.username}</span>
                               <span>·</span>
                               <span
                                 className={`font-semibold capitalize ${
                                   st === "online"
-                                    ? "text-[#81b64c]"
+                                    ? "text-[var(--primary)]"
                                     : st === "in-game"
                                     ? "text-amber-400"
                                     : "text-stone-500"
@@ -325,9 +326,10 @@ export default function FriendsModal({
 
                         {/* Action buttons */}
                         <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
-                          <button
-                            type="button"
-                            className="btn btn-primary !py-1 !px-3 text-xs shrink-0 whitespace-nowrap"
+                          <Button
+                            variant="filled"
+                            size="sm"
+                            className="!py-1 !px-3 text-xs shrink-0 whitespace-nowrap"
                             onClick={() => {
                               onChallenge(profile);
                               onClose();
@@ -336,15 +338,16 @@ export default function FriendsModal({
                           >
                             <Swords size={14} />
                             Challenge
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-ghost !p-2 text-stone-400 hover:text-red-400 shrink-0"
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="!p-2 text-[var(--on-surface-variant)] hover:text-red-500 shrink-0"
                             onClick={() => handleRemoveFriend(profile.id)}
                             title="Remove friend"
                           >
                             <UserMinus size={15} />
-                          </button>
+                          </Button>
                         </div>
                       </li>
                     );
@@ -358,15 +361,15 @@ export default function FriendsModal({
           {tab === "requests" && (
             <div className="space-y-6">
               <div>
-                <h3 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-stone-400">
+                <h3 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)]">
                   Incoming Requests ({pendingIn.length})
                 </h3>
                 {pendingIn.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-white/10 p-4 text-center text-xs text-stone-400">
+                  <p className="rounded-xl border border-dashed border-[var(--outline)] p-4 text-center text-xs text-[var(--on-surface-variant)]">
                     No pending incoming friend requests
                   </p>
                 ) : (
-                  <ul className="divide-y divide-white/10">
+                  <ul className="divide-y divide-[var(--outline)]">
                     {pendingIn.map((r) => {
                       const profile = r.friend_profile;
                       if (!profile) return null;
@@ -383,34 +386,36 @@ export default function FriendsModal({
                                 className="size-8 rounded-lg shrink-0"
                               />
                             ) : (
-                              <span className="grid size-8 place-items-center rounded-lg bg-[#383632] text-xs font-bold shrink-0">
+                              <span className="grid size-8 place-items-center rounded-lg bg-[var(--surface-container-high)] text-xs font-bold shrink-0">
                                 {profile.display_name[0]?.toUpperCase()}
                               </span>
                             )}
                             <div className="min-w-0 flex-1">
-                              <div className="truncate text-sm font-semibold">
+                              <div className="truncate text-sm font-semibold text-[var(--on-surface)]">
                                 {profile.display_name}
                               </div>
-                              <div className="truncate text-xs text-stone-400">
+                              <div className="truncate text-xs text-[var(--on-surface-variant)]">
                                 @{profile.username}
                               </div>
                             </div>
                           </div>
                           <div className="flex gap-1.5 shrink-0 whitespace-nowrap">
-                            <button
-                              type="button"
-                              className="btn btn-primary !py-1 !px-2.5 text-xs shrink-0 whitespace-nowrap"
+                            <Button
+                              variant="filled"
+                              size="sm"
+                              className="!py-1 !px-2.5 text-xs shrink-0 whitespace-nowrap"
                               onClick={() => handleRespond(r.id, "accept")}
                             >
                               <Check size={13} /> Accept
-                            </button>
-                            <button
-                              type="button"
-                              className="btn !py-1 !px-2 text-xs shrink-0 whitespace-nowrap"
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              size="sm"
+                              className="!py-1 !px-2 text-xs shrink-0 whitespace-nowrap"
                               onClick={() => handleRespond(r.id, "decline")}
                             >
                               Decline
-                            </button>
+                            </Button>
                           </div>
                         </li>
                       );
@@ -420,15 +425,15 @@ export default function FriendsModal({
               </div>
 
               <div>
-                <h3 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-stone-400">
+                <h3 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)]">
                   Outgoing Requests ({pendingOut.length})
                 </h3>
                 {pendingOut.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-white/10 p-4 text-center text-xs text-stone-400">
+                  <p className="rounded-xl border border-dashed border-[var(--outline)] p-4 text-center text-xs text-[var(--on-surface-variant)]">
                     No pending outgoing requests
                   </p>
                 ) : (
-                  <ul className="divide-y divide-white/10">
+                  <ul className="divide-y divide-[var(--outline)]">
                     {pendingOut.map((r) => {
                       const profile = r.friend_profile;
                       if (!profile) return null;
@@ -445,26 +450,27 @@ export default function FriendsModal({
                                 className="size-8 rounded-lg shrink-0"
                               />
                             ) : (
-                              <span className="grid size-8 place-items-center rounded-lg bg-[#383632] text-xs font-bold shrink-0">
+                              <span className="grid size-8 place-items-center rounded-lg bg-[var(--surface-container-high)] text-xs font-bold shrink-0">
                                 {profile.display_name[0]?.toUpperCase()}
                               </span>
                             )}
                             <div className="min-w-0 flex-1">
-                              <div className="truncate text-sm font-semibold">
+                              <div className="truncate text-sm font-semibold text-[var(--on-surface)]">
                                 {profile.display_name}
                               </div>
-                              <div className="truncate text-xs text-stone-400">
+                              <div className="truncate text-xs text-[var(--on-surface-variant)]">
                                 @{profile.username}
                               </div>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            className="btn !py-1 !px-2.5 text-xs text-stone-400 hover:text-stone-200 shrink-0 whitespace-nowrap"
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="!py-1 !px-2.5 text-xs text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] shrink-0 whitespace-nowrap"
                             onClick={() => handleRespond(r.id, "cancel")}
                           >
                             Cancel
-                          </button>
+                          </Button>
                         </li>
                       );
                     })}
@@ -478,28 +484,28 @@ export default function FriendsModal({
           {tab === "search" && (
             <div>
               <div className="relative mb-4">
-                <Search size={16} className="absolute left-3.5 top-3 text-stone-400" />
+                <Search size={16} className="absolute left-3.5 top-3 text-[var(--on-surface-variant)]" />
                 <input
                   type="text"
                   placeholder="Search by username or email…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-[#1e1d1b] py-2.5 pl-10 pr-4 text-sm text-stone-100 placeholder:text-stone-500 focus:border-[#81b64c] focus:outline-hidden"
+                  className="w-full rounded-xl border border-[var(--outline)] bg-[var(--surface-container-low)] py-2.5 pl-10 pr-4 text-sm text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)] focus:border-[var(--primary)] focus:outline-hidden"
                   autoFocus
                 />
               </div>
 
               {searching && (
-                <p className="py-4 text-center text-xs text-stone-400">Searching players…</p>
+                <p className="py-4 text-center text-xs text-[var(--on-surface-variant)]">Searching players…</p>
               )}
 
               {!searching && searchResults.length === 0 && searchQuery.trim() && (
-                <p className="py-8 text-center text-sm text-stone-400">
+                <p className="py-8 text-center text-sm text-[var(--on-surface-variant)]">
                   No players found matching &ldquo;{searchQuery}&rdquo;.
                 </p>
               )}
 
-              <ul className="divide-y divide-white/10">
+              <ul className="divide-y divide-[var(--outline)]">
                 {searchResults.map((p) => {
                   const alreadyFriend = isFriend(p.id);
                   const requested = isPendingOut(p.id);
@@ -518,41 +524,43 @@ export default function FriendsModal({
                             className="size-9 rounded-xl object-cover shrink-0"
                           />
                         ) : (
-                          <span className="grid size-9 place-items-center rounded-xl bg-[#383632] text-xs font-bold shrink-0">
+                          <span className="grid size-9 place-items-center rounded-xl bg-[var(--surface-container-high)] text-xs font-bold shrink-0">
                             {p.display_name[0]?.toUpperCase()}
                           </span>
                         )}
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold">{p.display_name}</div>
-                          <div className="truncate text-xs text-stone-400">@{p.username}</div>
+                          <div className="truncate text-sm font-semibold text-[var(--on-surface)]">{p.display_name}</div>
+                          <div className="truncate text-xs text-[var(--on-surface-variant)]">@{p.username}</div>
                         </div>
                       </div>
 
                       <div className="shrink-0 whitespace-nowrap">
                         {alreadyFriend ? (
-                          <span className="rounded-full bg-[#81b64c]/20 px-3 py-1 text-xs font-semibold text-[#81b64c]">
+                          <span className="rounded-full bg-[var(--primary)]/20 px-3 py-1 text-xs font-semibold text-[var(--primary)]">
                             Friends
                           </span>
                         ) : requested ? (
-                          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-stone-400">
+                          <span className="rounded-full bg-[var(--surface-container-high)] px-3 py-1 text-xs font-medium text-[var(--on-surface-variant)]">
                             Request Sent
                           </span>
                         ) : hasIncoming ? (
-                          <button
-                            type="button"
-                            className="btn btn-primary !py-1 !px-3 text-xs shrink-0 whitespace-nowrap"
+                          <Button
+                            variant="filled"
+                            size="sm"
+                            className="!py-1 !px-3 text-xs shrink-0 whitespace-nowrap"
                             onClick={() => setTab("requests")}
                           >
                             Respond
-                          </button>
+                          </Button>
                         ) : (
-                          <button
-                            type="button"
-                            className="btn btn-primary !py-1 !px-3 text-xs shrink-0 whitespace-nowrap"
+                          <Button
+                            variant="filled"
+                            size="sm"
+                            className="!py-1 !px-3 text-xs shrink-0 whitespace-nowrap"
                             onClick={() => handleSendRequest(p.id)}
                           >
                             <UserPlus size={13} /> Add Friend
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </li>

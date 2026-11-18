@@ -60,15 +60,15 @@ export default function GameView({
 
   if (!g.game) {
     return (
-      <Card className="mx-auto mt-12 max-w-md text-center p-8 bg-[#262522] border border-white/10">
+      <Card className="mx-auto mt-12 max-w-md text-center p-8 bg-[var(--surface-container)] border border-[var(--outline)]">
         {g.loading ? (
           <div className="flex flex-col items-center gap-3">
-            <RefreshCw size={24} className="animate-spin text-[#81b64c]" />
-            <p className="text-sm font-semibold text-stone-200">Loading game…</p>
+            <RefreshCw size={24} className="animate-spin text-[var(--primary)]" />
+            <p className="text-sm font-semibold text-[var(--on-surface)]">Loading game…</p>
           </div>
         ) : (
           <>
-            <p className="mb-4 text-sm text-stone-300">{g.error ?? "Game not found."}</p>
+            <p className="mb-4 text-sm text-[var(--on-surface-variant)]">{g.error ?? "Game not found."}</p>
             <Button variant="filled" onClick={g.sync}>
               <RefreshCw size={16} /> Retry
             </Button>
@@ -80,11 +80,11 @@ export default function GameView({
 
   if (g.game.status === "waiting") {
     return (
-      <Card className="mx-auto mt-12 max-w-md text-center p-8 bg-[#262522] border border-white/10">
+      <Card className="mx-auto mt-12 max-w-md text-center p-8 bg-[var(--surface-container)] border border-[var(--outline)]">
         <div className="flex flex-col items-center gap-3">
-          <RefreshCw size={28} className="animate-spin text-[#81b64c]" />
-          <h2 className="text-lg font-bold text-stone-100 font-heading">Matchmaking</h2>
-          <p className="text-sm text-stone-400">Waiting for an opponent to join the match…</p>
+          <RefreshCw size={28} className="animate-spin text-[var(--primary)]" />
+          <h2 className="text-lg font-bold text-[var(--on-surface)] font-heading">Matchmaking</h2>
+          <p className="text-sm text-[var(--on-surface-variant)]">Waiting for an opponent to join the match…</p>
         </div>
         <Button variant="outlined" className="mt-6 w-full" onClick={() => navigate(backTo)}>
           Cancel & Return
@@ -528,15 +528,15 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
       {/* RIGHT COLUMN: Telemetry & Floating Glass Dock */}
       <div className="flex flex-col gap-3">
         {/* Game Status & Mode Card */}
-        <div className="rounded-2xl p-4 space-y-3 bg-[#262522] border border-white/10 shadow-sm">
-          <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+        <div className="rounded-2xl p-4 space-y-3 bg-[var(--surface-container)] border border-[var(--outline)] shadow-sm">
+          <div className="flex items-center justify-between border-b border-[var(--outline)] pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-[#81b64c] animate-pulse" />
-              <span className="font-heading text-sm font-bold text-stone-100">
+              <span className="size-2 rounded-full bg-[var(--primary)] animate-pulse" />
+              <span className="font-heading text-sm font-bold text-[var(--on-surface)]">
                 {game.mode === "ai" ? "Computer Match" : "Online Match"}
               </span>
             </div>
-            <span className="rounded-md bg-white/10 px-2 py-0.5 font-mono text-xs font-bold text-stone-300">
+            <span className="rounded-md bg-[var(--surface-container-high)] px-2 py-0.5 font-mono text-xs font-bold text-[var(--on-surface)]">
               {game.tc === "unlimited" ? "Unlimited" : game.tc}
             </span>
           </div>
@@ -555,23 +555,23 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
           )}
 
           {/* Opening Explorer Bar */}
-          <div className="flex items-center gap-2 rounded-xl bg-[#1d1c1a] border border-white/10 px-3 py-2 text-xs">
-            <BookOpen size={15} className="text-[#81b64c] shrink-0" />
+          <div className="flex items-center gap-2 rounded-xl bg-[var(--surface-container-low)] border border-[var(--outline)] px-3 py-2 text-xs">
+            <BookOpen size={15} className="text-[var(--primary)] shrink-0" />
             <div className="min-w-0 flex-1 truncate">
-              <span className="font-semibold text-stone-200">{opening.name}</span>
+              <span className="font-semibold text-[var(--on-surface)]">{opening.name}</span>
               {opening.eco && (
-                <span className="ml-1.5 font-mono text-[11px] text-stone-400">({opening.eco})</span>
+                <span className="ml-1.5 font-mono text-[11px] text-[var(--on-surface-variant)]">({opening.eco})</span>
               )}
             </div>
           </div>
 
           {/* Turn status message */}
           {game.status === "finished" ? (
-            <div className="rounded-xl border border-[#81b64c]/30 bg-[#81b64c]/10 p-3 text-center">
-              <p className="font-heading text-base font-extrabold text-[#81b64c]">
+            <div className="rounded-xl border border-[var(--primary)]/30 bg-[var(--primary)]/10 p-3 text-center">
+              <p className="font-heading text-base font-extrabold text-[var(--primary)]">
                 {resultText(game)}
               </p>
-              <p className="text-xs text-stone-400 mt-0.5">{game.ply} plies completed</p>
+              <p className="text-xs text-[var(--on-surface-variant)] mt-0.5">{game.ply} plies completed</p>
               <Button
                 variant="filled"
                 className="mt-3 w-full font-bold"
@@ -581,7 +581,7 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
               </Button>
             </div>
           ) : (
-            <div className="flex items-center justify-between text-xs font-medium text-stone-300 px-1">
+            <div className="flex items-center justify-between text-xs font-medium text-[var(--on-surface)] px-1">
               <span>
                 {atLive
                   ? interactive || game.turn === myColor
@@ -591,7 +591,7 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
               </span>
               <button
                 type="button"
-                className="text-stone-400 hover:text-stone-200 transition-colors"
+                className="text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] transition-colors cursor-pointer"
                 onClick={toggleMute}
                 title={muted ? "Unmute sounds" : "Mute sounds"}
               >
@@ -603,34 +603,34 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
           {notice && (
             <div
               role="alert"
-              className="rounded-xl border border-red-500/30 bg-red-500/10 p-2.5 text-xs text-red-300"
+              className="rounded-xl border border-red-500/30 bg-red-500/10 p-2.5 text-xs text-red-500"
             >
               {notice}
             </div>
           )}
 
           {hint && (
-            <div className="rounded-xl border border-[#81b64c]/30 bg-[#81b64c]/10 p-2.5 text-xs text-stone-200 flex items-start gap-2">
-              <HelpCircle size={15} className="text-[#81b64c] shrink-0 mt-0.5" />
+            <div className="rounded-xl border border-[var(--primary)]/30 bg-[var(--primary)]/10 p-2.5 text-xs text-[var(--on-surface)] flex items-start gap-2">
+              <HelpCircle size={15} className="text-[var(--primary)] shrink-0 mt-0.5" />
               <span>{hint}</span>
             </div>
           )}
 
           {/* Engine Status indicator in AI Mode */}
           {game.mode === "ai" && active && (
-            <div className="flex items-center justify-between text-xs text-stone-400 pt-1 border-t border-white/5">
+            <div className="flex items-center justify-between text-xs text-[var(--on-surface-variant)] pt-1 border-t border-[var(--outline)]">
               <span className="flex items-center gap-1.5">
-                <Cpu size={14} className="text-[#81b64c]" />
+                <Cpu size={14} className="text-[var(--primary)]" />
                 {ai.status === "loading" && "Loading engine…"}
                 {ai.status === "thinking" && "Calculating…"}
                 {ai.status === "ready" && !ai.paused && "Engine ready"}
                 {ai.paused && "Engine paused"}
-                {ai.status === "error" && <span className="text-red-400">{ai.error}</span>}
+                {ai.status === "error" && <span className="text-red-500">{ai.error}</span>}
               </span>
               {ai.status === "thinking" && (
                 <button
                   type="button"
-                  className="btn !min-h-7 !py-0.5 !px-2 text-xs"
+                  className="rounded-lg p-1 text-xs text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] hover:bg-[var(--surface-container-high)] flex items-center gap-1 cursor-pointer transition-colors"
                   onClick={ai.stop}
                 >
                   <StopIcon size={12} /> Stop
@@ -641,121 +641,122 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
         </div>
 
         {/* Algebraic Move Table Card */}
-        <div className="rounded-2xl p-4 bg-[#262522] border border-white/10 shadow-sm">
+        <div className="rounded-2xl p-4 bg-[var(--surface-container)] border border-[var(--outline)] shadow-sm">
           <MovesPanel moves={moves} viewPly={viewPly} onSelect={select} />
         </div>
 
         {/* Floating Liquid Glass Action Dock */}
         <div className="liquid-glass rounded-2xl p-3 flex flex-wrap gap-2 items-center justify-between shadow-lg">
           <div className="flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              className="btn !min-h-8 !px-2.5 text-xs"
+            <Button
+              variant="tonal"
+              size="sm"
               onClick={() => setFlipped((f) => !f)}
               title="Flip board perspective"
               aria-label="Flip board"
             >
               <ArrowUpDown size={14} /> Flip
-            </button>
-            <button
-              type="button"
-              className="btn !min-h-8 !px-2.5 text-xs"
+            </Button>
+            <Button
+              variant="tonal"
+              size="sm"
               onClick={handleHint}
               title="Show tactical move hint"
             >
               <HelpCircle size={14} /> Hint
-            </button>
-            <button
-              type="button"
-              className="btn !min-h-8 !px-2.5 text-xs"
+            </Button>
+            <Button
+              variant="tonal"
+              size="sm"
               onClick={handleShare}
               title="Share match link"
             >
               <Share2 size={14} /> Share
-            </button>
-            <button
-              type="button"
-              className="btn !min-h-8 !px-2.5 text-xs"
+            </Button>
+            <Button
+              variant="tonal"
+              size="sm"
               onClick={copyPgn}
               title="Copy PGN notation"
             >
               <Copy size={14} /> PGN
-            </button>
-            <button
-              type="button"
-              className="btn !min-h-8 !px-2.5 text-xs"
+            </Button>
+            <Button
+              variant="tonal"
+              size="sm"
               onClick={downloadPgn}
               title="Export PGN file"
             >
               <Download size={14} /> Export
-            </button>
+            </Button>
           </div>
 
           {/* Resign / Draw Actions */}
           {active && myColor && (
             <div className="flex items-center gap-1.5 ml-auto">
               {claim && (
-                <button
-                  type="button"
-                  className="btn !min-h-8 !px-2.5 text-xs"
+                <Button
+                  variant="outlined"
+                  size="sm"
                   disabled={busy}
                   onClick={() => run("claim_draw")}
                 >
                   Claim draw ({claim.termination === "fifty_move" ? "50-move" : "3-fold"})
-                </button>
+                </Button>
               )}
 
               {game.mode === "online" && !offerByOpp && (
-                <button
-                  type="button"
-                  className="btn !min-h-8 !px-2.5 text-xs"
+                <Button
+                  variant="outlined"
+                  size="sm"
                   disabled={busy || offerByMe}
                   onClick={() => run("offer_draw")}
                 >
                   {offerByMe ? "Draw Offered" : "Offer Draw"}
-                </button>
+                </Button>
               )}
 
               {offerByOpp && (
                 <div className="flex gap-1">
-                  <button
-                    type="button"
-                    className="btn btn-primary !min-h-8 !px-2.5 text-xs"
+                  <Button
+                    variant="filled"
+                    size="sm"
                     disabled={busy}
                     onClick={() => run("accept_draw")}
                   >
                     Accept Draw
-                  </button>
-                  <button
-                    type="button"
-                    className="btn !min-h-8 !px-2 text-xs"
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="sm"
                     disabled={busy}
                     onClick={() => run("decline_draw")}
                   >
                     Decline
-                  </button>
+                  </Button>
                 </div>
               )}
 
               {!confirmResign ? (
-                <button
-                  type="button"
-                  className="btn btn-danger !min-h-8 !px-2.5 text-xs"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
                   disabled={busy}
                   onClick={() => setConfirmResign(true)}
                   title="Resign game"
                 >
                   <Flag size={14} /> Resign
-                </button>
+                </Button>
               ) : (
-                <button
-                  type="button"
-                  className="btn btn-danger-solid !min-h-8 !px-3 text-xs font-bold"
+                <Button
+                  variant="danger"
+                  size="sm"
                   disabled={busy}
                   onClick={() => run("resign")}
                 >
                   Confirm Resign?
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -811,8 +812,8 @@ function PlayerBar({
     <div
       className={`flex items-center justify-between rounded-xl px-3.5 py-2 transition-all duration-200 border ${
         toMove
-          ? "border-[#81b64c] bg-[#302e2b] shadow-[0_0_16px_rgba(129,182,76,0.2)] ring-1 ring-[#81b64c]"
-          : "border-white/10 bg-[#262522]"
+          ? "border-[var(--primary)] bg-[var(--surface-container-high)] shadow-[0_0_16px_rgba(129,182,76,0.2)] ring-1 ring-[var(--primary)]"
+          : "border-[var(--outline)] bg-[var(--surface-container)]"
       }`}
     >
       {/* Left: Avatar, Username, Elo, Captured Pieces */}
@@ -828,27 +829,27 @@ function PlayerBar({
               src={avatar}
               alt=""
               referrerPolicy="no-referrer"
-              className="size-9 rounded-xl border border-white/20 object-cover shadow-sm"
+              className="size-9 rounded-xl border border-[var(--outline)] object-cover shadow-sm"
             />
           ) : (
-            <span className="grid size-9 place-items-center rounded-xl bg-[#383632] border border-white/10 text-sm font-bold text-stone-200">
+            <span className="grid size-9 place-items-center rounded-xl bg-[var(--surface-container-high)] border border-[var(--outline)] text-sm font-bold text-[var(--on-surface)]">
               {name[0]?.toUpperCase()}
             </span>
           )}
           {toMove && (
-            <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-[#81b64c] ring-2 ring-[#262522] animate-pulse" />
+            <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-[var(--primary)] ring-2 ring-[var(--surface)] animate-pulse" />
           )}
         </div>
 
         {/* Name, Elo Badge & Captured Material */}
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-bold text-stone-100">
+            <span className="truncate text-sm font-bold text-[var(--on-surface)]">
               {name}
-              {you && <span className="font-normal text-stone-400"> (You)</span>}
+              {you && <span className="font-normal text-[var(--on-surface-variant)]"> (You)</span>}
             </span>
             {eloBadge && (
-              <span className="rounded bg-white/10 px-1.5 py-0.2 font-mono text-[10px] font-bold text-[#e5b84b]">
+              <span className="rounded bg-[var(--surface-container-high)] px-1.5 py-0.2 font-mono text-[10px] font-bold text-[var(--tertiary)]">
                 {eloBadge}
               </span>
             )}

@@ -68,9 +68,9 @@ export default function ResultDialog({
   }, [isOpen, ratingBefore, ratingAfter, isWin, isLoss]);
 
   const outcomeTitle = isWin ? "Victory" : isLoss ? "Defeat" : "Draw";
-  const outcomeColor = isWin ? "text-[#81b64c]" : isLoss ? "text-red-400" : "text-amber-400";
+  const outcomeColor = isWin ? "text-[var(--primary)]" : isLoss ? "text-red-500" : "text-amber-500";
   const bannerBg = isWin
-    ? "bg-[#81b64c]/10 border-[#81b64c]/30"
+    ? "bg-[var(--primary)]/10 border-[var(--primary)]/30"
     : isLoss
     ? "bg-red-500/10 border-red-500/30"
     : "bg-amber-500/10 border-amber-500/30";
@@ -106,11 +106,11 @@ export default function ResultDialog({
         {/* Outcome Icon */}
         <div className={`grid size-16 place-items-center rounded-2xl border ${bannerBg} shadow-lg`}>
           {isWin ? (
-            <Trophy size={32} className="text-[#81b64c] animate-bounce" />
+            <Trophy size={32} className="text-[var(--primary)] animate-bounce" />
           ) : isLoss ? (
-            <Flag size={32} className="text-red-400" />
+            <Flag size={32} className="text-red-500" />
           ) : (
-            <Handshake size={32} className="text-amber-400" />
+            <Handshake size={32} className="text-amber-500" />
           )}
         </div>
 
@@ -119,33 +119,33 @@ export default function ResultDialog({
           <h2 className={`text-2xl font-black font-heading tracking-tight ${outcomeColor}`}>
             {outcomeTitle}
           </h2>
-          <p className="text-xs text-stone-400 mt-1 capitalize">
+          <p className="text-xs text-[var(--on-surface-variant)] mt-1 capitalize">
             {terminationLabel} {opponentName ? `vs ${opponentName}` : ""}
           </p>
         </div>
 
         {/* Animated Elo Card */}
-        <div className="w-full rounded-2xl bg-[#262522] border border-white/10 p-4 shadow-inner">
-          <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-1">
+        <div className="w-full rounded-2xl bg-[var(--surface-container)] border border-[var(--outline)] p-4 shadow-inner">
+          <p className="text-xs font-semibold text-[var(--on-surface-variant)] uppercase tracking-wider mb-1">
             Rating Update
           </p>
           <div className="flex items-center justify-center gap-3">
-            <span className="font-mono text-3xl font-black text-white tabular-nums tracking-tight">
+            <span className="font-mono text-3xl font-black text-[var(--on-surface)] tabular-nums tracking-tight">
               {animatedElo}
             </span>
             {delta !== 0 && (
               <span
                 className={`rounded-full px-2.5 py-0.5 font-mono text-xs font-black shadow-sm ${
                   delta > 0
-                    ? "bg-[#81b64c]/20 text-[#81b64c] border border-[#81b64c]/30"
-                    : "bg-red-500/20 text-red-400 border border-red-500/30"
+                    ? "bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/30"
+                    : "bg-red-500/20 text-red-500 border border-red-500/30"
                 }`}
               >
                 {delta > 0 ? `+${delta}` : delta}
               </span>
             )}
           </div>
-          <p className="text-[11px] text-stone-400 mt-2 font-mono">
+          <p className="text-[11px] text-[var(--on-surface-variant)] mt-2 font-mono">
             {ratingBefore} → {ratingAfter}
           </p>
         </div>
@@ -161,7 +161,7 @@ export default function ResultDialog({
             <Eye size={16} /> Review Board
           </Button>
           {onHome && (
-            <Button variant="ghost" onClick={onHome} className="w-full text-stone-400 text-xs">
+            <Button variant="ghost" onClick={onHome} className="w-full text-[var(--on-surface-variant)] text-xs">
               Return to Home
             </Button>
           )}

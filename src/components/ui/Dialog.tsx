@@ -42,22 +42,31 @@ export const Dialog: React.FC<DialogProps> = ({
         ref={dialogRef}
         className={`glass w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden transition-all duration-200 ${className}`}
       >
-        <div className="flex items-center justify-between pb-4 border-b border-[var(--outline)]">
-          {title && (
+        {title ? (
+          <div className="flex items-center justify-between pb-4 border-b border-[var(--outline)]">
             <h3 className="text-xl font-bold font-heading text-[var(--on-surface)]">
               {title}
             </h3>
-          )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 -mr-2 rounded-full text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] hover:bg-[var(--surface-container)] cursor-pointer transition-colors"
+              aria-label="Close dialog"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        ) : (
           <button
             type="button"
             onClick={onClose}
-            className="p-2 -mr-2 rounded-full text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] hover:bg-[var(--surface-container)] cursor-pointer transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-full text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] hover:bg-[var(--surface-container)] cursor-pointer transition-colors z-10"
             aria-label="Close dialog"
           >
             <X size={20} />
           </button>
-        </div>
-        <div className="mt-4">{children}</div>
+        )}
+        <div className={title ? "mt-4" : ""}>{children}</div>
       </div>
     </div>
   );

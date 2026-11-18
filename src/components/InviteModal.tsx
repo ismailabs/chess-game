@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Clock, RefreshCw, X } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { errMsg } from "../lib/format";
+import { Button } from "./ui";
 import type { GameInvite, OnlineStatus, Profile } from "../lib/types";
 
 interface Props {
@@ -58,32 +59,32 @@ export default function InviteModal({ friend, status, onClose, onInviteSent }: P
     <div
       role="dialog"
       aria-label="Challenge Friend"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150"
     >
-      <div className="w-full max-w-md rounded-3xl border border-white/15 bg-[#262522] text-stone-100 p-6 shadow-2xl relative overflow-hidden">
+      <div className="w-full max-w-md rounded-3xl border border-[var(--outline)] bg-[var(--surface)] text-[var(--on-surface)] p-6 shadow-2xl relative overflow-hidden">
         {/* Top header */}
-        <div className="mb-5 flex items-center justify-between border-b border-white/10 pb-4">
+        <div className="mb-5 flex items-center justify-between border-b border-[var(--outline)] pb-4">
           <div className="flex items-center gap-3">
             {friend.avatar_url ? (
               <img
                 src={friend.avatar_url}
                 alt=""
-                className="size-11 rounded-xl object-cover border border-white/10 shrink-0"
+                className="size-11 rounded-xl object-cover border border-[var(--outline)] shrink-0"
               />
             ) : (
-              <span className="grid size-11 place-items-center rounded-xl bg-[#383632] font-bold text-stone-200 text-base shrink-0">
+              <span className="grid size-11 place-items-center rounded-xl bg-[var(--surface-container-high)] font-bold text-[var(--on-surface)] text-base shrink-0">
                 {friend.display_name[0]?.toUpperCase()}
               </span>
             )}
             <div className="min-w-0">
-              <h2 className="truncate text-base font-bold font-heading text-stone-100">
+              <h2 className="truncate text-base font-bold font-heading text-[var(--on-surface)]">
                 Challenge {friend.display_name}
               </h2>
-              <div className="flex items-center gap-1.5 text-xs text-stone-400">
+              <div className="flex items-center gap-1.5 text-xs text-[var(--on-surface-variant)]">
                 <span
                   className={`size-2 rounded-full ${
                     status === "online"
-                      ? "bg-[#81b64c]"
+                      ? "bg-[var(--primary)]"
                       : status === "in-game"
                       ? "bg-amber-400"
                       : "bg-stone-500"
@@ -97,7 +98,7 @@ export default function InviteModal({ friend, status, onClose, onInviteSent }: P
           </div>
           <button
             type="button"
-            className="rounded-lg p-1.5 text-stone-400 hover:bg-white/10 hover:text-white transition-colors"
+            className="rounded-lg p-1.5 text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)] transition-colors cursor-pointer"
             onClick={onClose}
             aria-label="Close dialog"
           >
@@ -108,7 +109,7 @@ export default function InviteModal({ friend, status, onClose, onInviteSent }: P
         <div className="space-y-5">
           {/* Time control selection */}
           <div>
-            <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-400">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)]">
               Time Control
             </label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -117,18 +118,18 @@ export default function InviteModal({ friend, status, onClose, onInviteSent }: P
                   key={t.id}
                   type="button"
                   onClick={() => setTc(t.id)}
-                  className={`flex flex-col items-center rounded-xl border p-2.5 text-center transition-all ${
+                  className={`flex flex-col items-center rounded-xl border p-2.5 text-center transition-all cursor-pointer ${
                     tc === t.id
-                      ? "border-[#81b64c] bg-[#81b64c]/15 text-white ring-1 ring-[#81b64c] shadow-[0_0_12px_rgba(129,182,76,0.25)] font-bold"
-                      : "border-white/10 bg-[#302e2b] text-stone-300 hover:bg-[#383632] hover:border-white/20"
+                      ? "border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--on-surface)] ring-1 ring-[var(--primary)] shadow-sm font-bold"
+                      : "border-[var(--outline)] bg-[var(--surface-container)] text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)]"
                   }`}
                 >
                   <Clock
                     size={16}
-                    className={tc === t.id ? "text-[#81b64c]" : "text-stone-400"}
+                    className={tc === t.id ? "text-[var(--primary)]" : "text-[var(--on-surface-variant)]"}
                   />
                   <span className="mt-1 font-mono text-sm">{t.label}</span>
-                  <span className="text-[10px] text-stone-400">{t.kind}</span>
+                  <span className="text-[10px] text-[var(--on-surface-variant)]">{t.kind}</span>
                 </button>
               ))}
             </div>
@@ -136,17 +137,17 @@ export default function InviteModal({ friend, status, onClose, onInviteSent }: P
 
           {/* Color selection */}
           <div>
-            <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-400">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)]">
               Your Pieces
             </label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setColor("w")}
-                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs sm:text-sm font-semibold transition-all ${
+                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   color === "w"
-                    ? "border-[#81b64c] bg-[#81b64c]/15 text-white ring-1 ring-[#81b64c]"
-                    : "border-white/10 bg-[#302e2b] text-stone-300 hover:bg-[#383632]"
+                    ? "border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--on-surface)] ring-1 ring-[var(--primary)]"
+                    : "border-[var(--outline)] bg-[var(--surface-container)] text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)]"
                 }`}
               >
                 <span className="size-3.5 rounded-full border border-black/30 bg-stone-100 shadow-xs" />
@@ -155,10 +156,10 @@ export default function InviteModal({ friend, status, onClose, onInviteSent }: P
               <button
                 type="button"
                 onClick={() => setColor("b")}
-                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs sm:text-sm font-semibold transition-all ${
+                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   color === "b"
-                    ? "border-[#81b64c] bg-[#81b64c]/15 text-white ring-1 ring-[#81b64c]"
-                    : "border-white/10 bg-[#302e2b] text-stone-300 hover:bg-[#383632]"
+                    ? "border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--on-surface)] ring-1 ring-[var(--primary)]"
+                    : "border-[var(--outline)] bg-[var(--surface-container)] text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)]"
                 }`}
               >
                 <span className="size-3.5 rounded-full border border-white/30 bg-stone-900 shadow-xs" />
@@ -167,10 +168,10 @@ export default function InviteModal({ friend, status, onClose, onInviteSent }: P
               <button
                 type="button"
                 onClick={() => setColor("random")}
-                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs sm:text-sm font-semibold transition-all ${
+                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   color === "random"
-                    ? "border-[#81b64c] bg-[#81b64c]/15 text-white ring-1 ring-[#81b64c]"
-                    : "border-white/10 bg-[#302e2b] text-stone-300 hover:bg-[#383632]"
+                    ? "border-[var(--primary)] bg-[var(--primary)]/15 text-[var(--on-surface)] ring-1 ring-[var(--primary)]"
+                    : "border-[var(--outline)] bg-[var(--surface-container)] text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)]"
                 }`}
               >
                 <span className="size-3.5 rounded-full border border-white/20 bg-gradient-to-r from-stone-100 to-stone-900 shadow-xs" />
@@ -182,24 +183,24 @@ export default function InviteModal({ friend, status, onClose, onInviteSent }: P
           {err && (
             <div
               role="alert"
-              className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300"
+              className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-500"
             >
               {err}
             </div>
           )}
 
           <div className="flex gap-2.5 pt-2">
-            <button
-              type="button"
-              className="btn flex-1"
+            <Button
+              variant="outlined"
+              className="flex-1"
               onClick={onClose}
               disabled={busy}
             >
               Cancel
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary flex-1 font-bold"
+            </Button>
+            <Button
+              variant="filled"
+              className="flex-1 font-bold"
               onClick={handleSend}
               disabled={busy}
             >
@@ -210,7 +211,7 @@ export default function InviteModal({ friend, status, onClose, onInviteSent }: P
               ) : (
                 "Send Challenge"
               )}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

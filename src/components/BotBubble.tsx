@@ -74,21 +74,21 @@ export default function BotBubble({
   }, [botStyle, gameStatus, inCheck, winner, ply]);
 
   return (
-    <div className="relative flex items-start gap-2.5 rounded-xl border border-white/10 bg-[#262522] p-3 text-xs text-stone-300 shadow-md">
-      <div className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#81b64c]/20 text-[#81b64c]">
-        {isAiTurn ? <Bot size={15} className="animate-spin text-[#81b64c]" /> : <MessageSquare size={14} />}
+    <div className="relative flex items-start gap-2.5 rounded-xl border border-[var(--outline)] bg-[var(--surface-container)] p-3 text-xs text-[var(--on-surface)] shadow-md">
+      <div className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--primary)]/20 text-[var(--primary)]">
+        {isAiTurn ? <Bot size={15} className="animate-spin text-[var(--primary)]" /> : <MessageSquare size={14} />}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 font-bold text-stone-200">
+        <div className="flex items-center gap-1.5 font-bold text-[var(--on-surface)]">
           <span className="truncate">{aiName}</span>
           {isAiTurn && (
-            <span className="inline-flex items-center gap-1 text-[10px] text-[#81b64c]">
-              <span className="size-1 rounded-full bg-[#81b64c] animate-ping" />
+            <span className="inline-flex items-center gap-1 text-[10px] text-[var(--primary)]">
+              <span className="size-1 rounded-full bg-[var(--primary)] animate-ping" />
               thinking…
             </span>
           )}
         </div>
-        <p className="mt-0.5 text-stone-400 italic">&ldquo;{quote}&rdquo;</p>
+        <p className="mt-0.5 text-[var(--on-surface-variant)] italic">&ldquo;{quote}&rdquo;</p>
       </div>
     </div>
   );

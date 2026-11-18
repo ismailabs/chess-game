@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Check, Clock, Swords, X } from "lucide-react";
+import { Button } from "./ui";
 import type { GameInvite } from "../lib/types";
 
 interface Props {
@@ -41,56 +42,58 @@ export default function ChallengeToast({ invite, onAccept, onDecline, busy }: Pr
   return (
     <div
       role="alert"
-      className="fixed bottom-16 md:bottom-6 right-4 sm:right-6 z-50 flex max-w-sm items-center gap-3.5 rounded-2xl border border-[#81b64c] bg-[#262522] p-4 shadow-2xl shadow-black/80 ring-1 ring-[#81b64c]/40 animate-in slide-in-from-bottom-5 duration-200"
+      className="fixed bottom-16 md:bottom-6 right-4 sm:right-6 z-50 flex max-w-sm items-center gap-3.5 rounded-2xl border border-[var(--primary)] bg-[var(--surface-container-high)] p-4 shadow-2xl ring-1 ring-[var(--primary)]/40 animate-in slide-in-from-bottom-5 duration-200"
     >
       <div className="relative shrink-0">
         {sender?.avatar_url ? (
           <img
             src={sender.avatar_url}
             alt=""
-            className="size-11 rounded-xl object-cover border border-white/10"
+            className="size-11 rounded-xl object-cover border border-[var(--outline)]"
           />
         ) : (
-          <span className="grid size-11 place-items-center rounded-xl bg-[#383632] font-bold text-stone-200 text-base">
+          <span className="grid size-11 place-items-center rounded-xl bg-[var(--surface-container)] font-bold text-[var(--on-surface)] text-base">
             {name[0]?.toUpperCase()}
           </span>
         )}
-        <span className="absolute -bottom-1 -right-1 grid size-5 place-items-center rounded-full bg-[#81b64c] text-white shadow-sm">
+        <span className="absolute -bottom-1 -right-1 grid size-5 place-items-center rounded-full bg-[var(--primary)] text-white shadow-sm">
           <Swords size={11} />
         </span>
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-bold text-stone-100">{name} challenged you!</div>
-        <div className="flex items-center gap-1.5 text-xs text-stone-400">
-          <Clock size={12} className="text-[#81b64c]" />
+        <div className="truncate text-sm font-bold text-[var(--on-surface)]">{name} challenged you!</div>
+        <div className="flex items-center gap-1.5 text-xs text-[var(--on-surface-variant)]">
+          <Clock size={12} className="text-[var(--primary)]" />
           <span className="font-mono">{invite.tc}</span>
           <span>·</span>
           <span>{colorText}</span>
           <span>·</span>
-          <span className="font-mono text-[#81b64c] font-bold tabular-nums">{secondsLeft}s</span>
+          <span className="font-mono text-[var(--primary)] font-bold tabular-nums">{secondsLeft}s</span>
         </div>
       </div>
 
       <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
-        <button
-          type="button"
-          className="btn btn-primary !h-8 !px-3 text-xs font-bold shrink-0"
+        <Button
+          variant="filled"
+          size="sm"
+          className="!h-8 !px-3 text-xs font-bold shrink-0"
           disabled={busy}
           onClick={() => onAccept(invite.id)}
           title="Accept challenge"
         >
           <Check size={14} /> Accept
-        </button>
-        <button
-          type="button"
-          className="btn !h-8 !px-2 text-xs text-stone-400 hover:text-red-400 shrink-0"
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="!h-8 !px-2 text-xs text-[var(--on-surface-variant)] hover:text-red-500 shrink-0"
           disabled={busy}
           onClick={() => onDecline(invite.id)}
           title="Decline challenge"
         >
           <X size={14} />
-        </button>
+        </Button>
       </div>
     </div>
   );
