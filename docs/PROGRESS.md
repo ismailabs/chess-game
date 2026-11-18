@@ -93,3 +93,32 @@
   - Bot ladder specification: PASSED (14 bots + Coach, unique IDs, ascending ratings)
   - Calibration: PASSED (recorded in `docs/RATING.md`)
 - **Next Up:** Merge `v2/bots` into `main`, then proceed to Phase 5 (Track F: Game Screen & Board Feel).
+
+## 2026-11-18 — Phase 5: Game Screen & Board Feel (Track F)
+- **Status:** COMPLETED
+- **Actions Completed:**
+  - Implemented tactile haptic feedback library `src/lib/haptics.ts` (`navigator.vibrate`) with light, medium, heavy, success, and error patterns.
+  - Enhanced native Web Audio synthesizer in `src/lib/sounds.ts`:
+    - Bandpass-filtered wood tap noise transient (`playWoodClick`) for authentic piece impact.
+    - Master volume slider control with persistence.
+    - Low-time acoustic clock ticking for under 10 seconds.
+  - Created isolated clock component `src/components/Clock.tsx`:
+    - Timer interval encapsulated inside the clock component; board and game view never re-render every 100ms.
+    - Turns crimson and pulses when under 10 seconds remaining.
+  - Built animated result dialog `src/components/ResultDialog.tsx`:
+    - Liquid glass modal/bottom sheet with animated Elo count-up (`ratingBefore → ratingAfter ±delta`).
+    - Termination breakdown, rematch, review board, and return home actions.
+  - Upgraded chessboard `src/components/Board.tsx`:
+    - Removed liquid-glass from board bezel per Design Law §2.2 (solid surface content rule).
+    - Added premove staging with distinctive styling and automatic execution on turn flip.
+    - Added legal move dots on empty squares and rings on captures.
+    - Added radial crimson glow on checked king.
+    - Integrated haptic feedback on piece lift, drag, and move completion.
+  - Overhauled `src/components/GameView.tsx`:
+    - Restricted liquid glass strictly to functional elements (dock, result dialog).
+    - Stripped forbidden marketing jargon ("Arena" replaced with standard lobby/match terms).
+    - Integrated automated client submission to `record-bot-game` on bot game finish.
+- **Gates:**
+  - Build health: PASSED (`npm run typecheck && npm test && npm run build`, 36/36 tests passing)
+  - Game feel & Design laws: PASSED (isolated clocks, no glass on content, haptics, wood tap audio)
+- **Next Up:** Merge `v2/game` into `main`, then proceed to Phase 6 & 7 (Track E: Screens & Navigation).

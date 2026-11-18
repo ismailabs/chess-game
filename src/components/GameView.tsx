@@ -19,13 +19,16 @@ import Board from "./Board";
 import MovesPanel from "./MovesPanel";
 import CapturedPieces from "./CapturedPieces";
 import BotBubble from "./BotBubble";
-import { Card } from "./ui";
+import Clock from "./Clock";
+import ResultDialog from "./ResultDialog";
+import { Card, Button } from "./ui";
 import { useGame } from "../hooks/useGame";
 import { useAiPlayer } from "../hooks/useAiPlayer";
 import { act, ApiError, serverNow, type ActionResult } from "../lib/api";
-import { errMsg, fmtClock, resultText } from "../lib/format";
+import { errMsg, resultText } from "../lib/format";
 import { navigate } from "../lib/router";
 import { detectOpening } from "../lib/openings";
+import { supabase } from "../lib/supabase";
 import {
   isMuted,
   playCaptureSound,
@@ -35,6 +38,7 @@ import {
   playMoveSound,
   setMuted,
 } from "../lib/sounds";
+import { triggerHaptic } from "../lib/haptics";
 import type { Game, MoveRow, Side } from "../lib/types";
 import {
   claimableDraw,
@@ -56,18 +60,18 @@ export default function GameView({
 
   if (!g.game) {
     return (
-      <Card className="mx-auto mt-12 max-w-md text-center liquid-glass p-8">
+      <Card className="mx-auto mt-12 max-w-md text-center p-8 bg-[#262522] border border-white/10">
         {g.loading ? (
           <div className="flex flex-col items-center gap-3">
             <RefreshCw size={24} className="animate-spin text-[#81b64c]" />
-            <p className="text-sm font-semibold text-stone-200">Loading arena…</p>
+            <p className="text-sm font-semibold text-stone-200">Loading game…</p>
           </div>
         ) : (
           <>
             <p className="mb-4 text-sm text-stone-300">{g.error ?? "Game not found."}</p>
-            <button className="btn btn-primary" onClick={g.sync}>
+            <Button variant="filled" onClick={g.sync}>
               <RefreshCw size={16} /> Retry
-            </button>
+            </Button>
           </>
         )}
       </Card>
@@ -76,15 +80,15 @@ export default function GameView({
 
   if (g.game.status === "waiting") {
     return (
-      <Card className="mx-auto mt-12 max-w-md text-center liquid-glass p-8">
+      <Card className="mx-auto mt-12 max-w-md text-center p-8 bg-[#262522] border border-white/10">
         <div className="flex flex-col items-center gap-3">
           <RefreshCw size={28} className="animate-spin text-[#81b64c]" />
-          <h2 className="text-lg font-bold text-stone-100 font-heading">Matchmaking Arena</h2>
+          <h2 className="text-lg font-bold text-stone-100 font-heading">Matchmaking</h2>
           <p className="text-sm text-stone-400">Waiting for an opponent to join the match…</p>
         </div>
-        <button className="btn mt-6 w-full" onClick={() => navigate(backTo)}>
-          Cancel & Return to Lobby
-        </button>
+        <Button variant="outlined" className="mt-6 w-full" onClick={() => navigate(backTo)}>
+          Cancel & Return
+        </Button>
       </Card>
     );
   }
@@ -125,8 +129,17 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
   const [tick, setTick] = useState(0);
   const [muted, setMutedState] = useState(() => isMuted());
   const [hint, setHint] = useState<string | null>(null);
+  const [hintsUsed, setHintsUsed] = useState(0);
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [resultDetails, setResultDetails] = useState<{
+    ratingBefore: number;
+    ratingAfter: number;
+    delta: number;
+  }>({ ratingBefore: 800, ratingAfter: 800, delta: 0 });
+
   const prevMoveCountRef = useRef(moves.length);
   const prevStatusRef = useRef(game.status);
+  const recordedBotGameRef = useRef(false);
 
   // Retrieve stored bot personality style from session
   const botStyle = useMemo(() => {
@@ -158,17 +171,26 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
           (game.mode === "ai" && game.turn !== game.ai_color) ||
           (game.mode === "online" && last.player_id !== userId);
         if (movedByOpponent) {
-          if (last.san.includes("#") || last.san.includes("+")) playCheckSound();
-          else if (last.san.includes("x")) playCaptureSound();
-          else if (last.san.startsWith("O-O")) playCastleSound();
-          else playMoveSound();
+          if (last.san.includes("#") || last.san.includes("+")) {
+            playCheckSound();
+            triggerHaptic("heavy");
+          } else if (last.san.includes("x")) {
+            playCaptureSound();
+            triggerHaptic("medium");
+          } else if (last.san.startsWith("O-O")) {
+            playCastleSound();
+            triggerHaptic("medium");
+          } else {
+            playMoveSound();
+            triggerHaptic("light");
+          }
         }
       }
     }
     prevMoveCountRef.current = moves.length;
   }, [moves.length, game.mode, game.turn, game.ai_color, userId]);
 
-  // Audio trigger on game finish
+  // Audio trigger & Result dialog on game finish
   useEffect(() => {
     if (prevStatusRef.current === "active" && game.status === "finished") {
       const won =
@@ -177,9 +199,67 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
           : (game.result === "1-0" && myColor === "w") ||
             (game.result === "0-1" && myColor === "b");
       playGameEndSound(won);
+      setShowResultDialog(true);
+
+      // Handle server-side rating recording for bot game
+      if (game.mode === "ai" && !recordedBotGameRef.current) {
+        recordedBotGameRef.current = true;
+        (async () => {
+          try {
+            const botEloMatch = (game.black_name ?? "").match(/\((\d+)\)/);
+            const nominalElo = botEloMatch ? parseInt(botEloMatch[1], 10) : 1000;
+            const botId = (game.ai_engine ?? "pebble").toLowerCase();
+
+            const { data } = await supabase.functions.invoke("record-bot-game", {
+              body: {
+                botId,
+                botName: game.black_name ?? "Bot",
+                botElo: nominalElo,
+                userColor: myColor ?? "w",
+                pgn: game.pgn,
+                tc: game.tc,
+                hintsUsed,
+                takebacksUsed: 0,
+              },
+            });
+
+            if (data && data.success) {
+              setResultDetails({
+                ratingBefore: data.ratingBefore ?? 800,
+                ratingAfter: data.ratingAfter ?? 800,
+                delta: data.delta ?? 0,
+              });
+            }
+          } catch {
+            /* ignore network errors */
+          }
+        })();
+      } else if (game.mode === "online") {
+        // Query rating_history for delta
+        (async () => {
+          try {
+            const { data } = await supabase
+              .from("rating_history")
+              .select("rating_before, rating_after, delta")
+              .eq("game_id", game.id)
+              .eq("user_id", userId)
+              .maybeSingle();
+
+            if (data) {
+              setResultDetails({
+                ratingBefore: data.rating_before,
+                ratingAfter: data.rating_after,
+                delta: data.delta,
+              });
+            }
+          } catch {
+            /* ignore */
+          }
+        })();
+      }
     }
     prevStatusRef.current = game.status;
-  }, [game.status, game.result, myColor]);
+  }, [game.status, game.result, myColor, game.mode, game.pgn, game.tc, game.black_name, game.ai_engine, hintsUsed, game.id, userId]);
 
   function toggleMute() {
     const next = !muted;
@@ -353,7 +433,7 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
       try {
         await navigator.share({
           title: "Chess | Ismail Studio Match",
-          text: `Spectate or review this live chess game on Ismail Studio Chess!`,
+          text: `Spectate or review this live chess game!`,
           url,
         });
         return;
@@ -371,18 +451,19 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
 
   function handleHint() {
     try {
+      setHintsUsed((h) => h + 1);
       const chess = new Chess(fen);
       const legalMoves = chess.moves({ verbose: true });
       if (legalMoves.length === 0) {
         setHint("No legal moves available.");
         return;
       }
-      // Suggest a tactically solid move (prefer captures or center controls)
       const capture = legalMoves.find((m) => m.captured);
       const chosen = capture ?? legalMoves[0];
-      setHint(`Suggested tactical idea: ${chosen.san} (${chosen.from} → ${chosen.to})`);
+      setHint(`Suggested idea: ${chosen.san} (${chosen.from} → ${chosen.to})`);
+      triggerHaptic("light");
     } catch {
-      setHint("Analyze center control and piece development.");
+      setHint("Focus on central piece activity.");
     }
   }
 
@@ -444,15 +525,15 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
         </p>
       </div>
 
-      {/* RIGHT COLUMN: Liquid Glass Telemetry & Action Dock */}
+      {/* RIGHT COLUMN: Telemetry & Floating Glass Dock */}
       <div className="flex flex-col gap-3">
         {/* Game Status & Mode Card */}
-        <div className="liquid-glass rounded-2xl p-4 space-y-3">
+        <div className="rounded-2xl p-4 space-y-3 bg-[#262522] border border-white/10 shadow-sm">
           <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
             <div className="flex items-center gap-2">
               <span className="size-2 rounded-full bg-[#81b64c] animate-pulse" />
               <span className="font-heading text-sm font-bold text-stone-100">
-                {game.mode === "ai" ? "Computer Match" : "Online Live Match"}
+                {game.mode === "ai" ? "Computer Match" : "Online Match"}
               </span>
             </div>
             <span className="rounded-md bg-white/10 px-2 py-0.5 font-mono text-xs font-bold text-stone-300">
@@ -474,7 +555,7 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
           )}
 
           {/* Opening Explorer Bar */}
-          <div className="flex items-center gap-2 rounded-xl bg-[#262522] border border-white/10 px-3 py-2 text-xs">
+          <div className="flex items-center gap-2 rounded-xl bg-[#1d1c1a] border border-white/10 px-3 py-2 text-xs">
             <BookOpen size={15} className="text-[#81b64c] shrink-0" />
             <div className="min-w-0 flex-1 truncate">
               <span className="font-semibold text-stone-200">{opening.name}</span>
@@ -491,13 +572,13 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
                 {resultText(game)}
               </p>
               <p className="text-xs text-stone-400 mt-0.5">{game.ply} plies completed</p>
-              <button
-                type="button"
-                className="btn btn-primary mt-3 w-full font-bold"
-                onClick={() => navigate(backTo)}
+              <Button
+                variant="filled"
+                className="mt-3 w-full font-bold"
+                onClick={() => setShowResultDialog(true)}
               >
-                Done / Back to Arena
-              </button>
+                View Result Summary
+              </Button>
             </div>
           ) : (
             <div className="flex items-center justify-between text-xs font-medium text-stone-300 px-1">
@@ -540,8 +621,8 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
             <div className="flex items-center justify-between text-xs text-stone-400 pt-1 border-t border-white/5">
               <span className="flex items-center gap-1.5">
                 <Cpu size={14} className="text-[#81b64c]" />
-                {ai.status === "loading" && "Loading WASM engine…"}
-                {ai.status === "thinking" && "Stockfish calculating…"}
+                {ai.status === "loading" && "Loading engine…"}
+                {ai.status === "thinking" && "Calculating…"}
                 {ai.status === "ready" && !ai.paused && "Engine ready"}
                 {ai.paused && "Engine paused"}
                 {ai.status === "error" && <span className="text-red-400">{ai.error}</span>}
@@ -560,12 +641,12 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
         </div>
 
         {/* Algebraic Move Table Card */}
-        <div className="liquid-glass rounded-2xl p-4">
+        <div className="rounded-2xl p-4 bg-[#262522] border border-white/10 shadow-sm">
           <MovesPanel moves={moves} viewPly={viewPly} onSelect={select} />
         </div>
 
-        {/* Bottom Tactile Action Dock */}
-        <div className="liquid-glass rounded-2xl p-3 flex flex-wrap gap-2 items-center justify-between">
+        {/* Floating Liquid Glass Action Dock */}
+        <div className="liquid-glass rounded-2xl p-3 flex flex-wrap gap-2 items-center justify-between shadow-lg">
           <div className="flex flex-wrap gap-1.5">
             <button
               type="button"
@@ -680,6 +761,21 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
           )}
         </div>
       </div>
+
+      {/* Result Dialog Modal */}
+      <ResultDialog
+        isOpen={showResultDialog}
+        onClose={() => setShowResultDialog(false)}
+        result={game.result ?? "1/2-1/2"}
+        termination={game.termination}
+        myColor={myColor}
+        opponentName={myColor === "w" ? game.black_name ?? "Opponent" : game.white_name ?? "Opponent"}
+        ratingBefore={resultDetails.ratingBefore}
+        ratingAfter={resultDetails.ratingAfter}
+        delta={resultDetails.delta}
+        onRematch={() => navigate("/play")}
+        onHome={() => navigate("/")}
+      />
     </div>
   );
 }
@@ -695,21 +791,6 @@ function PlayerBar({
   you: boolean;
   fen: string;
 }) {
-  const [now, setNow] = useState(() => serverNow());
-  const running =
-    game.status === "active" &&
-    game.ply >= 2 &&
-    game.turn === color &&
-    game.tc !== "unlimited";
-
-  useEffect(() => {
-    setNow(serverNow());
-    if (!running) return;
-    const t = setInterval(() => setNow(serverNow()), 100);
-    return () => clearInterval(t);
-  }, [running, game.revision]);
-
-  const ms = remainingAt(game, now)[color];
   const name =
     (color === "w" ? game.white_name : game.black_name) ??
     (color === "w" ? "White" : "Black");
@@ -725,8 +806,6 @@ function PlayerBar({
     }
     return null;
   }, [isAi, game.ai_level, name]);
-
-  const isLowTime = ms < 15_000 && game.status === "active" && game.tc !== "unlimited";
 
   return (
     <div
@@ -779,17 +858,8 @@ function PlayerBar({
         </div>
       </div>
 
-      {/* Right: Tabular Numeral Clock */}
-      <div
-        aria-label={`${color === "w" ? "White" : "Black"} clock`}
-        className={`rounded-lg px-3 py-1 font-mono text-lg font-bold tabular-nums transition-all ${
-          toMove
-            ? "bg-[#383632] text-white border border-white/15 shadow-inner"
-            : "bg-[#1e1d1b] text-stone-400"
-        } ${isLowTime ? "!bg-red-950 !text-red-400 !border-red-600 animate-pulse" : ""}`}
-      >
-        {game.tc === "unlimited" ? "∞" : fmtClock(ms)}
-      </div>
+      {/* Right: Isolated Tabular Numeral Clock */}
+      <Clock game={game} color={color} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Chess, type Square } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { playCaptureSound, playCastleSound, playCheckSound, playMoveSound } from "../lib/sounds";
+import { triggerHaptic } from "../lib/haptics";
 import type { Side } from "../lib/types";
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
   interactive: boolean;
   lastMove: { from: string; to: string } | null;
   onMove: (uci: string) => void;
+  boardTheme?: "green" | "slate" | "walnut";
 }
 
 function kingSquare(chess: Chess, color: Side): string | null {
@@ -22,6 +24,12 @@ function kingSquare(chess: Chess, color: Side): string | null {
   return null;
 }
 
+const BOARD_COLORS = {
+  green: { light: "#eeeed2", dark: "#769656" },
+  slate: { light: "#e0e4eb", dark: "#6c7d93" },
+  walnut: { light: "#f0d9b5", dark: "#b58863" },
+};
+
 export default function Board({
   fen,
   orientation,
@@ -29,10 +37,30 @@ export default function Board({
   interactive,
   lastMove,
   onMove,
+  boardTheme = "green",
 }: Props) {
   const chess = useMemo(() => new Chess(fen), [fen]);
   const [sel, setSel] = useState<string | null>(null);
   const [promo, setPromo] = useState<{ from: string; to: string } | null>(null);
+  const [premove, setPremove] = useState<{ from: string; to: string } | null>(null);
+
+  // If premove exists and it is now my turn, execute premove immediately if legal
+  useEffect(() => {
+    if (premove && interactive && myColor && chess.turn() === myColor) {
+      const legalMoves = chess.moves({ square: premove.from as Square, verbose: true });
+      const target = legalMoves.find((m) => m.to === premove.to);
+      if (target) {
+        if (target.promotion) {
+          // Default auto-queen for premoves
+          onMove(`${premove.from}${premove.to}q`);
+        } else {
+          onMove(`${premove.from}${premove.to}`);
+        }
+        triggerMoveAudio(target);
+      }
+      setPremove(null);
+    }
+  }, [fen, interactive, myColor, premove, chess, onMove]);
 
   useEffect(() => {
     setSel(null);
@@ -40,31 +68,54 @@ export default function Board({
   }, [fen, interactive]);
 
   const canMove = interactive && !!myColor && chess.turn() === myColor;
+  const isPremoveEligible = !canMove && !!myColor && interactive;
+
   const legal = useMemo(
     () => (sel ? chess.moves({ square: sel as Square, verbose: true }) : []),
     [sel, chess]
   );
 
   function triggerMoveAudio(m: { captured?: string; san: string }) {
-    if (m.captured) playCaptureSound();
-    else if (m.san.startsWith("O-O")) playCastleSound();
-    else if (m.san.includes("+") || m.san.includes("#")) playCheckSound();
-    else playMoveSound();
+    if (m.captured) {
+      playCaptureSound();
+      triggerHaptic("medium");
+    } else if (m.san.startsWith("O-O")) {
+      playCastleSound();
+      triggerHaptic("medium");
+    } else if (m.san.includes("+") || m.san.includes("#")) {
+      playCheckSound();
+      triggerHaptic("heavy");
+    } else {
+      playMoveSound();
+      triggerHaptic("light");
+    }
   }
 
   function attempt(from: string, to: string): boolean {
-    const cands = chess
-      .moves({ square: from as Square, verbose: true })
-      .filter((m) => m.to === to);
-    if (!cands.length) return false;
-    if (cands.some((m) => m.promotion)) {
-      setPromo({ from, to });
-      return false;
+    if (canMove) {
+      const cands = chess
+        .moves({ square: from as Square, verbose: true })
+        .filter((m) => m.to === to);
+      if (!cands.length) return false;
+      if (cands.some((m) => m.promotion)) {
+        setPromo({ from, to });
+        return false;
+      }
+      setSel(null);
+      triggerMoveAudio(cands[0]);
+      onMove(from + to);
+      return true;
     }
-    setSel(null);
-    triggerMoveAudio(cands[0]);
-    onMove(from + to);
-    return true;
+
+    // Handle Premove
+    if (isPremoveEligible) {
+      setPremove({ from, to });
+      setSel(null);
+      triggerHaptic("light");
+      return true;
+    }
+
+    return false;
   }
 
   const squareStyles = useMemo(() => {
@@ -73,17 +124,28 @@ export default function Board({
       s[sq] = { ...s[sq], ...st };
     };
 
-    // Yellow last-move highlight: rgba(255, 255, 0, 0.45)
+    // Yellow last-move highlight
     if (lastMove) {
-      add(lastMove.from, { backgroundColor: "rgba(255, 255, 0, 0.40)" });
-      add(lastMove.to, { backgroundColor: "rgba(255, 255, 0, 0.48)" });
+      add(lastMove.from, { backgroundColor: "rgba(255, 235, 59, 0.36)" });
+      add(lastMove.to, { backgroundColor: "rgba(255, 235, 59, 0.45)" });
     }
 
     // Selected piece highlight: Emerald glow
     if (sel) {
       add(sel, {
         backgroundColor: "rgba(129, 182, 76, 0.55)",
-        boxShadow: "inset 0 0 0 2px #81b64c",
+        boxShadow: "inset 0 0 0 2.5px #81b64c",
+      });
+    }
+
+    // Premove highlight: subtle blue indicator
+    if (premove) {
+      add(premove.from, {
+        backgroundColor: "rgba(59, 130, 246, 0.35)",
+        boxShadow: "inset 0 0 0 2px #3b82f6",
+      });
+      add(premove.to, {
+        backgroundColor: "rgba(59, 130, 246, 0.45)",
       });
     }
 
@@ -93,7 +155,7 @@ export default function Board({
       if (k) {
         add(k, {
           backgroundImage:
-            "radial-gradient(circle, rgba(220, 38, 38, 0.9) 0%, rgba(220, 38, 38, 0.4) 60%, transparent 80%)",
+            "radial-gradient(circle, rgba(220, 38, 38, 0.85) 0%, rgba(220, 38, 38, 0.35) 60%, transparent 80%)",
         });
       }
     }
@@ -103,43 +165,62 @@ export default function Board({
       const isCapture = !!m.captured || m.flags.includes("e");
       add(m.to, {
         backgroundImage: isCapture
-          ? "radial-gradient(circle, transparent 54%, rgba(0, 0, 0, 0.35) 56%, rgba(0, 0, 0, 0.35) 74%, transparent 76%)"
-          : "radial-gradient(circle, rgba(0, 0, 0, 0.28) 22%, transparent 25%)",
+          ? "radial-gradient(circle, transparent 54%, rgba(0, 0, 0, 0.38) 56%, rgba(0, 0, 0, 0.38) 72%, transparent 75%)"
+          : "radial-gradient(circle, rgba(0, 0, 0, 0.30) 22%, transparent 25%)",
       });
     }
 
     return s;
-  }, [chess, sel, legal, lastMove]);
+  }, [chess, sel, legal, lastMove, premove]);
+
+  const colors = BOARD_COLORS[boardTheme] ?? BOARD_COLORS.green;
 
   const options = {
     id: "main-board",
     position: fen,
     boardOrientation: orientation,
     squareStyles,
-    lightSquareStyle: { backgroundColor: "#eeeed2" },
-    darkSquareStyle: { backgroundColor: "#769656" },
+    lightSquareStyle: { backgroundColor: colors.light },
+    darkSquareStyle: { backgroundColor: colors.dark },
     boardStyle: {
-      borderRadius: "10px",
-      boxShadow: "0 16px 36px -8px rgba(0, 0, 0, 0.6)",
+      borderRadius: "12px",
+      boxShadow: "0 12px 32px -8px rgba(0, 0, 0, 0.5)",
     },
-    animationDurationInMs: 180,
+    animationDurationInMs: 160,
     canDragPiece: ({ piece }: { piece: { pieceType: string } }) =>
-      canMove && piece.pieceType[0] === myColor,
+      (canMove || isPremoveEligible) && piece.pieceType[0] === myColor,
     onPieceDrop: ({
       sourceSquare,
       targetSquare,
     }: {
       sourceSquare: string;
       targetSquare: string | null;
-    }) => (canMove && !!targetSquare ? attempt(sourceSquare, targetSquare) : false),
-    onSquareClick: ({ square }: { square: string }) => {
-      if (!canMove) return;
-      if (sel && legal.some((m) => m.to === square)) {
-        attempt(sel, square);
-        return;
+    }) => {
+      if (targetSquare) {
+        return attempt(sourceSquare, targetSquare);
       }
-      const p = chess.get(square as Square);
-      setSel(p && p.color === myColor && square !== sel ? square : null);
+      return false;
+    },
+    onPieceDragBegin: () => {
+      triggerHaptic("light");
+    },
+    onSquareClick: ({ square }: { square: string }) => {
+      if (canMove || isPremoveEligible) {
+        if (sel && legal.some((m) => m.to === square)) {
+          attempt(sel, square);
+          return;
+        }
+        const p = chess.get(square as Square);
+        if (p && p.color === myColor) {
+          setSel(square !== sel ? square : null);
+          triggerHaptic("light");
+        } else if (sel) {
+          // Attempt click-click move
+          attempt(sel, square);
+        } else {
+          setSel(null);
+        }
+      }
     },
   };
 
@@ -152,7 +233,7 @@ export default function Board({
 
   return (
     <div
-      className="relative touch-manipulation liquid-glass p-1.5 sm:p-2 rounded-2xl shadow-2xl"
+      className="relative touch-manipulation bg-[#262522] border border-white/10 p-1.5 sm:p-2 rounded-2xl shadow-xl transition-colors"
       role="group"
       aria-label="Interactive chess board"
     >
@@ -165,9 +246,9 @@ export default function Board({
         <div
           role="dialog"
           aria-label="Choose promotion piece"
-          className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+          className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-black/70 backdrop-blur-sm animate-in fade-in duration-150"
         >
-          <div className="liquid-glass rounded-2xl border border-white/15 p-5 shadow-2xl max-w-xs w-full text-center">
+          <div className="bg-[#262522] rounded-2xl border border-white/15 p-5 shadow-2xl max-w-xs w-full text-center">
             <p className="mb-3 text-sm font-bold text-stone-100 font-heading">
               Promote Pawn To
             </p>
@@ -181,6 +262,7 @@ export default function Board({
                     const { from, to } = promo;
                     setPromo(null);
                     setSel(null);
+                    triggerHaptic("medium");
                     playMoveSound();
                     onMove(from + to + p);
                   }}
@@ -192,7 +274,10 @@ export default function Board({
             <button
               type="button"
               className="btn btn-ghost mt-3 w-full text-xs text-stone-400"
-              onClick={() => setPromo(null)}
+              onClick={() => {
+                setPromo(null);
+                triggerHaptic("light");
+              }}
             >
               Cancel
             </button>
