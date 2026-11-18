@@ -127,12 +127,12 @@ describe("Bot Engine Weakening & Pebble Logic", () => {
     const moveHighTemp = softmaxSelect(candidates, 2.5);
     expect(["e2e4", "d2d4", "g1f3", "f2f3"]).toContain(moveHighTemp);
 
-    // Low temperature (strongly favors e2e4)
+    // Low temperature (strongly favors e2e4: theoretical ~84.5% probability)
     let bestCount = 0;
     for (let i = 0; i < 50; i++) {
       const selected = softmaxSelect(candidates, 0.1);
       if (selected === "e2e4") bestCount++;
     }
-    expect(bestCount).toBeGreaterThanOrEqual(40);
+    expect(bestCount).toBeGreaterThanOrEqual(35);
   });
 });

@@ -29,6 +29,17 @@ export interface Profile {
   display_name: string;
   email?: string | null;
   avatar_url?: string | null;
+  bio?: string;
+  description?: string;
+  country?: string | null;
+  theme_pref?: "system" | "light" | "dark";
+  rating?: number;
+  peak_rating?: number;
+  games_played?: number;
+  wins?: number;
+  draws?: number;
+  losses?: number;
+  username_changed_at?: string | null;
   created_at?: string;
   updated_at?: string;
 }

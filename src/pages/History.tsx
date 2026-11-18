@@ -72,8 +72,8 @@ function List({ userId }: { userId: string }) {
   };
 
   return (
-    <div className="mx-auto max-w-2xl pb-6">
-      <Card className="liquid-glass p-6 sm:p-8 space-y-5">
+    <div className="mx-auto max-w-3xl pb-12">
+      <Card className="bg-[#262522] border-white/10 p-6 sm:p-8 space-y-6 shadow-xl">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs font-semibold text-stone-300 mb-2">
             <HistoryIcon size={13} className="text-[#81b64c]" />

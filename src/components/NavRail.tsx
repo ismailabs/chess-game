@@ -1,13 +1,16 @@
 import {
-  Cpu,
+  Bot,
+  Home as HomeIcon,
   History as HistoryIcon,
   LogOut,
+  Settings as SettingsIcon,
   Swords,
+  Trophy,
   Users,
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { Link } from "../lib/router";
+import { Link, navigate } from "../lib/router";
 import { ThemeToggle } from "./ui";
 
 interface Props {
@@ -33,9 +36,12 @@ export default function NavRail({
   onSignOut,
 }: Props) {
   const navItems = [
-    { to: "/online", key: "online", label: "Play Online", icon: Swords },
-    { to: "/computer", key: "computer", label: "Play Bots", icon: Cpu },
+    { to: "/", key: "home", label: "Home", icon: HomeIcon },
+    { to: "/play", key: "play", label: "Play Online", icon: Swords },
+    { to: "/bots", key: "bots", label: "Play Bots", icon: Bot },
+    { to: "/leaderboard", key: "leaderboard", label: "Leaderboard", icon: Trophy },
     { to: "/history", key: "history", label: "Game History", icon: HistoryIcon },
+    { to: "/settings", key: "settings", label: "Settings", icon: SettingsIcon },
   ];
 
   return (
@@ -46,7 +52,7 @@ export default function NavRail({
       {/* Top: Logo & Main Navigation */}
       <div className="space-y-6">
         {/* Brand Header */}
-        <Link to="/online" className="flex items-center gap-3 px-2 group">
+        <Link to="/" className="flex items-center gap-3 px-2 group">
           <div className="size-10 shrink-0 transition-transform duration-200 group-hover:scale-105">
             <img src="/logo.svg" alt="Chess Logo" className="size-full" />
           </div>
@@ -64,7 +70,10 @@ export default function NavRail({
         <nav className="space-y-1.5" aria-label="Main Navigation">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activePage === item.key;
+            const isActive =
+              activePage === item.key ||
+              (item.key === "play" && activePage === "online") ||
+              (item.key === "bots" && activePage === "computer");
             return (
               <Link
                 key={item.key}
@@ -130,15 +139,20 @@ export default function NavRail({
           <span className="font-mono text-[11px] text-stone-400">{muted ? "OFF" : "ON"}</span>
         </button>
 
-        {/* User Profile Capsule */}
+        {/* User Profile Capsule (clicks to /profile) */}
         <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-[#302e2b] p-2.5 shadow-md">
-          <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            type="button"
+            onClick={() => navigate("/profile")}
+            className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-85 transition-opacity"
+            title="View Profile"
+          >
             {user.avatar ? (
               <img
                 src={user.avatar}
                 alt=""
                 referrerPolicy="no-referrer"
-                className="size-9 rounded-full ring-2 ring-white/10 shrink-0"
+                className="size-9 rounded-full ring-2 ring-white/10 shrink-0 object-cover"
               />
             ) : (
               <span className="grid size-9 place-items-center rounded-full bg-[#383632] text-sm font-bold text-stone-200 shrink-0">
@@ -147,9 +161,9 @@ export default function NavRail({
             )}
             <div className="min-w-0">
               <div className="truncate text-xs font-bold text-stone-100">{user.name}</div>
-              <div className="truncate text-[10px] text-stone-400">Online</div>
+              <div className="truncate text-[10px] text-[#81b64c]">View Profile</div>
             </div>
-          </div>
+          </button>
 
           <button
             type="button"

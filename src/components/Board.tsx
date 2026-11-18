@@ -37,12 +37,27 @@ export default function Board({
   interactive,
   lastMove,
   onMove,
-  boardTheme = "green",
+  boardTheme,
 }: Props) {
   const chess = useMemo(() => new Chess(fen), [fen]);
   const [sel, setSel] = useState<string | null>(null);
   const [promo, setPromo] = useState<{ from: string; to: string } | null>(null);
   const [premove, setPremove] = useState<{ from: string; to: string } | null>(null);
+
+  const storedTheme =
+    typeof window !== "undefined"
+      ? (localStorage.getItem("chess_board_theme") as "green" | "slate" | "walnut" | null)
+      : null;
+  const activeBoardTheme = boardTheme || storedTheme || "green";
+
+  const hintsEnabled =
+    typeof window !== "undefined" ? localStorage.getItem("chess_move_hints") !== "false" : true;
+  const premovesConfig =
+    typeof window !== "undefined" ? localStorage.getItem("chess_premoves") !== "false" : true;
+  const autoQueenEnabled =
+    typeof window !== "undefined" ? localStorage.getItem("chess_auto_queen") === "true" : false;
+  const showCoords =
+    typeof window !== "undefined" ? localStorage.getItem("chess_show_coords") !== "false" : true;
 
   // If premove exists and it is now my turn, execute premove immediately if legal
   useEffect(() => {
@@ -68,7 +83,7 @@ export default function Board({
   }, [fen, interactive]);
 
   const canMove = interactive && !!myColor && chess.turn() === myColor;
-  const isPremoveEligible = !canMove && !!myColor && interactive;
+  const isPremoveEligible = premovesConfig && !canMove && !!myColor && interactive;
 
   const legal = useMemo(
     () => (sel ? chess.moves({ square: sel as Square, verbose: true }) : []),
@@ -98,6 +113,12 @@ export default function Board({
         .filter((m) => m.to === to);
       if (!cands.length) return false;
       if (cands.some((m) => m.promotion)) {
+        if (autoQueenEnabled) {
+          setSel(null);
+          triggerMoveAudio(cands[0]);
+          onMove(`${from}${to}q`);
+          return true;
+        }
         setPromo({ from, to });
         return false;
       }
@@ -160,26 +181,29 @@ export default function Board({
       }
     }
 
-    // Legal move indicators: dot for empty square, ring for capture
-    for (const m of legal) {
-      const isCapture = !!m.captured || m.flags.includes("e");
-      add(m.to, {
-        backgroundImage: isCapture
-          ? "radial-gradient(circle, transparent 54%, rgba(0, 0, 0, 0.38) 56%, rgba(0, 0, 0, 0.38) 72%, transparent 75%)"
-          : "radial-gradient(circle, rgba(0, 0, 0, 0.30) 22%, transparent 25%)",
-      });
+    // Legal move indicators: dot for empty square, ring for capture (if enabled)
+    if (hintsEnabled) {
+      for (const m of legal) {
+        const isCapture = !!m.captured || m.flags.includes("e");
+        add(m.to, {
+          backgroundImage: isCapture
+            ? "radial-gradient(circle, transparent 54%, rgba(0, 0, 0, 0.38) 56%, rgba(0, 0, 0, 0.38) 72%, transparent 75%)"
+            : "radial-gradient(circle, rgba(0, 0, 0, 0.30) 22%, transparent 25%)",
+        });
+      }
     }
 
     return s;
-  }, [chess, sel, legal, lastMove, premove]);
+  }, [chess, sel, legal, lastMove, premove, hintsEnabled]);
 
-  const colors = BOARD_COLORS[boardTheme] ?? BOARD_COLORS.green;
+  const colors = BOARD_COLORS[activeBoardTheme] ?? BOARD_COLORS.green;
 
   const options = {
     id: "main-board",
     position: fen,
     boardOrientation: orientation,
     squareStyles,
+    showBoardCoordinates: showCoords,
     lightSquareStyle: { backgroundColor: colors.light },
     darkSquareStyle: { backgroundColor: colors.dark },
     boardStyle: {

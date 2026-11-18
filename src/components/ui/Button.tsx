@@ -3,11 +3,12 @@ import React from "react";
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "filled" | "tonal" | "outlined" | "text" | "danger" | "ghost";
   size?: "sm" | "md" | "lg" | "icon";
-  children: React.ReactNode;
+  icon?: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = "filled", size = "md", className = "", children, disabled, ...props }, ref) => {
+  ({ variant = "filled", size = "md", icon, className = "", children, disabled, ...props }, ref) => {
     const baseStyles =
       "inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-150 select-none cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 touch-manipulation";
 
@@ -40,6 +41,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
         {...props}
       >
+        {icon && <span className="shrink-0">{icon}</span>}
         {children}
       </button>
     );

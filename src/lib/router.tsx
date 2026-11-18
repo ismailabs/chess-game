@@ -24,7 +24,10 @@ export interface RouteMatch {
 export function matchRoute(path: string): RouteMatch {
   const clean = path.replace(/\/+$/, "") || "/";
 
-  if (clean === "/" || clean === "/play") {
+  if (clean === "/") {
+    return { name: "home", params: {} };
+  }
+  if (clean === "/play" || clean === "/online") {
     return { name: "play", params: {} };
   }
   if (clean === "/bots" || clean === "/computer") {
@@ -47,6 +50,11 @@ export function matchRoute(path: string): RouteMatch {
   }
 
   // Parameterized routes
+  const botIdMatch = clean.match(/^\/bots\/([a-zA-Z0-9_-]+)/);
+  if (botIdMatch) {
+    return { name: "bots", params: { id: botIdMatch[1] } };
+  }
+
   const gameMatch = clean.match(/^\/game\/([a-zA-Z0-9_-]+)/);
   if (gameMatch) {
     return { name: "game", params: { id: gameMatch[1] } };
@@ -63,7 +71,7 @@ export function matchRoute(path: string): RouteMatch {
     return { name: legacyMatch[1], params: { id: legacyMatch[2] } };
   }
 
-  return { name: clean.slice(1) || "play", params: {} };
+  return { name: clean.slice(1) || "home", params: {} };
 }
 
 export function Link({

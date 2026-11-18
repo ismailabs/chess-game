@@ -124,11 +124,11 @@ function Lobby({
   return (
     <div className="mx-auto max-w-xl space-y-5">
       {/* Matchmaking Card */}
-      <Card className="liquid-glass space-y-5 p-6 sm:p-8">
+      <Card className="bg-[#262522] border-white/10 space-y-5 p-6 sm:p-8 shadow-xl">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs font-semibold text-[#81b64c] mb-2">
             <span className="size-1.5 rounded-full bg-[#81b64c] animate-pulse" />
-            Live Arena
+            Live Matches
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight font-heading text-stone-100">
             Play Online
@@ -201,7 +201,7 @@ function Lobby({
 
       {/* Active Ongoing Games */}
       {active.length > 0 && (
-        <Card className="liquid-glass p-5">
+        <Card className="bg-[#262522] border-white/10 p-5 shadow-xl">
           <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-stone-400">
             Active Games in Progress
           </h2>

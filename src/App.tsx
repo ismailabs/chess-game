@@ -1,18 +1,24 @@
 import { useEffect, useState } from "react";
 import {
   LogOut,
+  Settings as SettingsIcon,
   Users,
   Volume2,
   VolumeX,
 } from "lucide-react";
 import { AuthProvider, useAuth } from "./lib/auth";
-import { usePath } from "./lib/router";
+import { matchRoute, navigate, usePath } from "./lib/router";
 import { configError, supabase } from "./lib/supabase";
 import { Card, ThemeToggle } from "./components/ui";
+import Home from "./pages/Home";
 import Online from "./pages/Online";
-import Computer from "./pages/Computer";
+import Bots from "./pages/Bots";
+import Leaderboard from "./pages/Leaderboard";
+import ProfilePage from "./pages/Profile";
 import History from "./pages/History";
+import Settings from "./pages/Settings";
 import DevKit from "./pages/DevKit";
+import GameView from "./components/GameView";
 import FriendsModal from "./components/FriendsModal";
 import InviteModal from "./components/InviteModal";
 import ChallengeToast from "./components/ChallengeToast";
@@ -40,8 +46,17 @@ function Shell() {
   const [muted, setMutedState] = useState(() => isMuted());
   const [friendsList, setFriendsList] = useState<Friendship[]>([]);
 
-  const [page = "online", id] = path.split("/").filter(Boolean);
-  const inGameId = (page === "online" || page === "computer") && id ? id : null;
+  const route = matchRoute(path);
+
+  // Derive in-game ID for presence if playing a live game
+  const inGameId =
+    route.name === "play" ||
+    route.name === "online" ||
+    route.name === "bots" ||
+    route.name === "computer" ||
+    route.name === "game"
+      ? route.params.id ?? null
+      : null;
 
   // Realtime Presence & Friend Invites
   const { getStatus } = usePresence(user?.id, inGameId);
@@ -56,12 +71,19 @@ function Shell() {
   // Set document title according to current route
   useEffect(() => {
     const titles: Record<string, string> = {
+      home: "Chess | Ismail Studio",
+      play: "Play Online | Chess | Ismail Studio",
       online: "Play Online | Chess | Ismail Studio",
-      computer: "Play Stockfish Bots | Chess | Ismail Studio",
+      bots: "Play Bots | Chess | Ismail Studio",
+      computer: "Play Bots | Chess | Ismail Studio",
       history: "Game History | Chess | Ismail Studio",
+      leaderboard: "Leaderboard | Chess | Ismail Studio",
+      profile: "Player Profile | Chess | Ismail Studio",
+      user: "Player Profile | Chess | Ismail Studio",
+      settings: "Settings | Chess | Ismail Studio",
     };
-    document.title = titles[page] ?? "Chess | Ismail Studio";
-  }, [page]);
+    document.title = titles[route.name] ?? "Chess | Ismail Studio";
+  }, [route.name]);
 
   // Load friends to compute online count badge
   useEffect(() => {
@@ -94,7 +116,7 @@ function Shell() {
   if (configError) {
     return (
       <div className="grid min-h-dvh place-items-center bg-[#262522] p-4 text-stone-100">
-        <Card className="liquid-glass max-w-md text-center p-6">
+        <Card className="max-w-md text-center p-6 bg-[#302e2b] border border-red-500/30">
           <p className="text-red-400 font-semibold">{configError}</p>
         </Card>
       </div>
@@ -132,7 +154,7 @@ function Shell() {
     <div className="flex min-h-dvh bg-[#262522] text-stone-100 antialiased overflow-x-hidden">
       {/* Desktop Sleek Left Navigation Rail */}
       <NavRail
-        activePage={page}
+        activePage={route.name}
         onOpenFriends={() => setShowFriends(true)}
         onlineFriendsCount={onlineFriendsCount}
         muted={muted}
@@ -177,6 +199,15 @@ function Shell() {
 
             <button
               type="button"
+              className="rounded-lg p-2 text-stone-400 hover:text-stone-200 transition-colors"
+              onClick={() => navigate("/settings")}
+              title="Settings"
+            >
+              <SettingsIcon size={18} />
+            </button>
+
+            <button
+              type="button"
               className="rounded-lg p-2 text-stone-400 hover:text-red-400 transition-colors"
               onClick={signOut}
               title="Sign out"
@@ -188,14 +219,30 @@ function Shell() {
 
         {/* Dynamic Route Content */}
         <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-          {page === "computer" ? (
-            <Computer userId={user.id} gameId={id} />
-          ) : page === "history" ? (
-            <History userId={user.id} gameId={id} />
+          {route.name === "home" ? (
+            <Home
+              userId={user.id}
+              onOpenFriends={() => setShowFriends(true)}
+              onlineFriendsCount={onlineFriendsCount}
+            />
+          ) : route.name === "bots" || route.name === "computer" ? (
+            <Bots userId={user.id} gameId={route.params.id} />
+          ) : route.name === "leaderboard" ? (
+            <Leaderboard currentUserId={user.id} />
+          ) : route.name === "history" ? (
+            <History userId={user.id} gameId={route.params.id} />
+          ) : route.name === "profile" ? (
+            <ProfilePage currentUserId={user.id} />
+          ) : route.name === "user" ? (
+            <ProfilePage currentUserId={user.id} targetUsername={route.params.username} />
+          ) : route.name === "settings" ? (
+            <Settings />
+          ) : route.name === "game" ? (
+            <GameView gameId={route.params.id} userId={user.id} backTo="/play" />
           ) : (
             <Online
               userId={user.id}
-              gameId={id}
+              gameId={route.params.id}
               onOpenFriends={() => setShowFriends(true)}
               getStatus={getStatus}
             />
@@ -205,13 +252,7 @@ function Shell() {
         {/* Global Footer (Desktop) */}
         <footer className="hidden md:flex items-center justify-between border-t border-white/10 px-8 py-4 text-xs text-stone-400">
           <div>
-            Computer opponent powered by Stockfish WASM. Hosted on{" "}
-            <a
-              href="https://chess.ismailstudio.my"
-              className="font-medium text-[#81b64c] hover:underline"
-            >
-              chess.ismailstudio.my
-            </a>
+            Chess by Ismail Studio · Stockfish WASM · Free and open source under GPL-3.0
           </div>
           <div className="font-mono text-stone-400">© Ismail Studio</div>
         </footer>
@@ -219,7 +260,7 @@ function Shell() {
 
       {/* Mobile Frosted Bottom Tab Bar */}
       <MobileTabBar
-        activePage={page}
+        activePage={route.name}
         onOpenFriends={() => setShowFriends(true)}
         onlineFriendsCount={onlineFriendsCount}
       />
