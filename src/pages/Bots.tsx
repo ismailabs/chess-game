@@ -69,11 +69,6 @@ function BotPicker({ userId }: { userId: string }) {
   const filteredBots = filter === "all" ? BOTS : BOTS.filter((b) => b.difficulty === filter);
 
   async function handleStartMatch() {
-    if (isGuest) {
-      setError("Sign in with Google to start matches, record game history, and climb the rating ladder.");
-      return;
-    }
-
     setBusy(true);
     setError(null);
     try {
@@ -90,11 +85,14 @@ function BotPicker({ userId }: { userId: string }) {
 
       const r = await act({
         action: "new_ai",
+        guest: isGuest,
         tc,
         humanColor,
         level: levelNumber,
         engine: "stockfish-lite",
         aiName: `${selectedBot.name} (${selectedBot.elo})`,
+        botId: selectedBot.id,
+        botStyle: selectedBot.style,
       });
 
       // Store bot metadata in session
@@ -248,6 +246,19 @@ function BotPicker({ userId }: { userId: string }) {
             </label>
             <TimeControlPicker value={tc} onChange={setTc} />
           </div>
+
+          {isGuest && !error && (
+            <div className="flex items-center justify-between rounded-xl bg-[var(--surface-container)] border border-[var(--outline)] px-3 py-2 text-[11px] text-[var(--on-surface-variant)]">
+              <span>Playing as Guest (Unrated)</span>
+              <button
+                type="button"
+                onClick={signIn}
+                className="font-bold text-[var(--primary)] hover:underline cursor-pointer"
+              >
+                Sign In
+              </button>
+            </div>
+          )}
 
           {error && (
             <div

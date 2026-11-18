@@ -48,21 +48,28 @@ export function Segmented<T extends string | number>({
 export function TimeControlPicker({
   value,
   onChange,
+  columns = 2,
+  className = "",
 }: {
   value: string;
   onChange: (v: string) => void;
+  columns?: 2 | 4;
+  className?: string;
 }) {
   const kindIcons: Record<string, React.ReactNode> = {
-    Bullet: <Zap size={14} className="text-amber-500" />,
-    Blitz: <Flame size={14} className="text-orange-500" />,
-    Rapid: <Timer size={14} className="text-emerald-500" />,
-    Casual: <InfinityIcon size={14} className="text-sky-500" />,
+    Bullet: <Zap size={14} className="text-amber-500 shrink-0" />,
+    Blitz: <Flame size={14} className="text-orange-500 shrink-0" />,
+    Rapid: <Timer size={14} className="text-emerald-500 shrink-0" />,
+    Casual: <InfinityIcon size={14} className="text-sky-500 shrink-0" />,
   };
 
+  const gridCols = columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2";
+
   return (
-    <div role="radiogroup" aria-label="Time control" className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+    <div role="radiogroup" aria-label="Time control" className={`grid ${gridCols} gap-2 sm:gap-2.5 ${className}`}>
       {TIME_CONTROLS.map((t) => {
         const isSelected = t.id === value;
+        const isUnlimited = t.id === "unlimited";
         return (
           <button
             key={t.id}
@@ -70,19 +77,21 @@ export function TimeControlPicker({
             role="radio"
             aria-checked={isSelected}
             onClick={() => onChange(t.id)}
-            className={`flex flex-col justify-between rounded-2xl p-3.5 text-left transition-all duration-150 cursor-pointer border ${
+            className={`flex flex-col justify-between rounded-2xl p-3 sm:p-3.5 text-left transition-all duration-150 cursor-pointer border ${
+              isUnlimited && columns === 2 ? "col-span-2" : ""
+            } ${
               isSelected
                 ? "border-[var(--primary)] bg-[var(--surface)] shadow-md ring-2 ring-[var(--primary)]/30"
                 : "border-[var(--outline)] bg-[var(--surface-container)] hover:bg-[var(--surface-container-high)]"
             }`}
           >
             <div className="flex items-center justify-between gap-1">
-              <span className="font-mono text-base font-bold text-[var(--on-surface)]">
-                {t.id === "unlimited" ? "Unlimited" : t.id}
+              <span className="font-mono text-sm sm:text-base font-bold text-[var(--on-surface)] truncate">
+                {isUnlimited ? "Unlimited" : t.id}
               </span>
               <span>{kindIcons[t.kind]}</span>
             </div>
-            <div className="mt-1 text-xs font-medium text-[var(--on-surface-variant)]">
+            <div className="mt-1 text-[11px] sm:text-xs font-medium text-[var(--on-surface-variant)]">
               {t.kind}
             </div>
           </button>

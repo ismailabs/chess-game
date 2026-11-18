@@ -16,6 +16,7 @@ export interface ResultDialogProps {
   ratingBefore?: number;
   ratingAfter?: number;
   delta?: number;
+  isGuest?: boolean;
   onRematch?: () => void;
   onHome?: () => void;
 }
@@ -30,6 +31,7 @@ export default function ResultDialog({
   ratingBefore = 800,
   ratingAfter = 800,
   delta = 0,
+  isGuest = false,
   onRematch,
   onHome,
 }: ResultDialogProps) {
@@ -124,31 +126,42 @@ export default function ResultDialog({
           </p>
         </div>
 
-        {/* Animated Elo Card */}
-        <div className="w-full rounded-2xl bg-[var(--surface-container)] border border-[var(--outline)] p-4 shadow-inner">
-          <p className="text-xs font-semibold text-[var(--on-surface-variant)] uppercase tracking-wider mb-1">
-            Rating Update
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            <span className="font-mono text-3xl font-black text-[var(--on-surface)] tabular-nums tracking-tight">
-              {animatedElo}
+        {/* Rating Card or Guest Notice */}
+        {isGuest ? (
+          <div className="w-full rounded-2xl bg-[var(--surface-container)] border border-[var(--outline)] p-4 text-center space-y-1.5 shadow-inner">
+            <span className="inline-block rounded-full bg-[var(--primary)]/15 border border-[var(--primary)]/30 px-2.5 py-0.5 text-xs font-bold text-[var(--primary)]">
+              Guest Match
             </span>
-            {delta !== 0 && (
-              <span
-                className={`rounded-full px-2.5 py-0.5 font-mono text-xs font-black shadow-sm ${
-                  delta > 0
-                    ? "bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/30"
-                    : "bg-red-500/20 text-red-500 border border-red-500/30"
-                }`}
-              >
-                {delta > 0 ? `+${delta}` : delta}
-              </span>
-            )}
+            <p className="text-xs text-[var(--on-surface-variant)] leading-relaxed">
+              Sign in with Google to record matches, earn Elo rating points, and climb the leaderboard.
+            </p>
           </div>
-          <p className="text-[11px] text-[var(--on-surface-variant)] mt-2 font-mono">
-            {ratingBefore} → {ratingAfter}
-          </p>
-        </div>
+        ) : (
+          <div className="w-full rounded-2xl bg-[var(--surface-container)] border border-[var(--outline)] p-4 shadow-inner">
+            <p className="text-xs font-semibold text-[var(--on-surface-variant)] uppercase tracking-wider mb-1">
+              Rating Update
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <span className="font-mono text-3xl font-black text-[var(--on-surface)] tabular-nums tracking-tight">
+                {animatedElo}
+              </span>
+              {delta !== 0 && (
+                <span
+                  className={`rounded-full px-2.5 py-0.5 font-mono text-xs font-black shadow-sm ${
+                    delta > 0
+                      ? "bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/30"
+                      : "bg-red-500/20 text-red-500 border border-red-500/30"
+                  }`}
+                >
+                  {delta > 0 ? `+${delta}` : delta}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-[var(--on-surface-variant)] mt-2 font-mono">
+              {ratingBefore} → {ratingAfter}
+            </p>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="w-full flex flex-col gap-2 pt-2">

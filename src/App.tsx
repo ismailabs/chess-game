@@ -161,28 +161,61 @@ function Shell() {
 
   return (
     <div className="flex min-h-dvh bg-[var(--bg)] text-[var(--on-surface)] antialiased overflow-x-hidden transition-colors">
-      {/* Desktop Navigation Rail */}
-      <NavRail
-        activePage={route.name}
-        onOpenFriends={() => setShowFriends(true)}
-        onlineFriendsCount={onlineFriendsCount}
-        muted={muted}
-        onToggleMute={toggleMute}
-        user={user ? { name, avatar } : null}
-        onSignOut={signOut}
-        onSignIn={signIn}
-      />
+      {/* Desktop Navigation Rail (Only shown when authenticated) */}
+      {user && (
+        <NavRail
+          activePage={route.name}
+          onOpenFriends={() => setShowFriends(true)}
+          onlineFriendsCount={onlineFriendsCount}
+          muted={muted}
+          onToggleMute={toggleMute}
+          user={{ name, avatar }}
+          onSignOut={signOut}
+          onSignIn={signIn}
+        />
+      )}
 
       {/* Main App Workspace Canvas */}
       <div className="flex flex-1 flex-col min-w-0 bg-[var(--surface-container)] pb-20 md:pb-6 transition-colors">
-        {/* Mobile Top Header (Hidden on md and up where NavRail is visible) */}
-        <header className="md:hidden flex items-center justify-between border-b border-[var(--outline)] bg-[var(--surface)] px-4 py-3 sticky top-0 z-30 backdrop-blur-md transition-colors">
-          <Link to="/" className="flex items-center gap-2.5">
-            <img src="/logo.svg" alt="Chess Logo" className="size-8" />
-            <span className="font-extrabold text-sm tracking-tight text-[var(--on-surface)] font-heading">
-              Chess | Ismail Studio
-            </span>
-          </Link>
+        {/* Top Header: Hidden on desktop if signed in (NavRail active); visible everywhere when signed out */}
+        <header
+          className={`${
+            user ? "md:hidden" : "flex"
+          } items-center justify-between border-b border-[var(--outline)] bg-[var(--surface)] px-4 sm:px-8 py-3.5 sticky top-0 z-30 backdrop-blur-md transition-colors`}
+        >
+          <div className="flex items-center gap-6">
+            <Link to="/" className="flex items-center gap-2.5 group">
+              <img src="/logo.svg" alt="Chess Logo" className="size-8 transition-transform group-hover:scale-105" />
+              <span className="font-extrabold text-sm tracking-tight text-[var(--on-surface)] font-heading">
+                Chess | Ismail Studio
+              </span>
+            </Link>
+
+            {!user && (
+              <nav className="hidden sm:flex items-center gap-1 text-xs font-semibold" aria-label="Guest Navigation">
+                <Link
+                  to="/bots"
+                  className={`rounded-lg px-3 py-1.5 transition-colors ${
+                    route.name === "bots" || route.name === "computer"
+                      ? "bg-[var(--surface-container-high)] text-[var(--primary)] font-bold"
+                      : "text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+                  }`}
+                >
+                  Play Bots
+                </Link>
+                <Link
+                  to="/leaderboard"
+                  className={`rounded-lg px-3 py-1.5 transition-colors ${
+                    route.name === "leaderboard"
+                      ? "bg-[var(--surface-container-high)] text-[var(--primary)] font-bold"
+                      : "text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+                  }`}
+                >
+                  Leaderboard
+                </Link>
+              </nav>
+            )}
+          </div>
 
           <div className="flex items-center gap-1.5">
             <ThemeToggle />
@@ -230,11 +263,11 @@ function Shell() {
             ) : (
               <button
                 type="button"
-                className="rounded-lg px-2.5 py-1.5 text-xs font-bold bg-[var(--primary)] text-[var(--on-primary)] transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+                className="rounded-xl px-3 py-1.5 text-xs font-bold bg-[var(--primary)] text-[var(--on-primary)] transition-all cursor-pointer flex items-center gap-2 shadow-sm hover:bg-[var(--primary-hover)] active:scale-[0.98]"
                 onClick={signIn}
                 title="Sign in with Google"
               >
-                <LogIn size={14} />
+                <img src="/google-logo.svg" alt="" className="size-4 shrink-0" />
                 <span>Sign In</span>
               </button>
             )}
@@ -242,7 +275,11 @@ function Shell() {
         </header>
 
         {/* Dynamic Route Content */}
-        <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full">
+        <main
+          className={`flex-1 p-3 sm:p-6 lg:p-8 w-full ${
+            !user && route.name === "home" ? "max-w-6xl mx-auto" : "max-w-5xl mx-auto"
+          }`}
+        >
           <Suspense fallback={<PageSkeleton />}>
             {route.name === "home" ? (
               user ? (
