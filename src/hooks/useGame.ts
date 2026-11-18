@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { act, type ActionResult } from "../lib/api";
+import { isGuestGameId } from "../lib/guestGame";
 import { errMsg } from "../lib/format";
 import { supabase } from "../lib/supabase";
 import type { Game, MoveRow } from "../lib/types";
@@ -57,6 +58,11 @@ export function useGame(id: string) {
   }, [sync]);
 
   useEffect(() => {
+    if (isGuestGameId(id)) {
+      setLive("live");
+      sync();
+      return;
+    }
     const ch = supabase.channel(`game:${id}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "games", filter: `id=eq.${id}` },
         (p) => setGame((g) => pick(g, p.new as unknown as Game)))
@@ -71,10 +77,10 @@ export function useGame(id: string) {
 
   // Safety net: poll lightly while a game is active (faster if Realtime is down).
   useEffect(() => {
-    if (game?.status !== "active") return;
+    if (isGuestGameId(id) || game?.status !== "active") return;
     const t = setInterval(() => { if (document.visibilityState === "visible") sync(); }, live === "live" ? 30_000 : 8_000);
     return () => clearInterval(t);
-  }, [game?.status, live, sync]);
+  }, [id, game?.status, live, sync]);
 
   // If the move list is behind the game row, reload the full history.
   useEffect(() => {
