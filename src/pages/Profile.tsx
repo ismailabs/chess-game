@@ -5,16 +5,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Trophy,
-  Flame,
-  Swords,
-  Bot,
   Calendar,
   Edit2,
-  Check,
-  X,
   Globe,
-  Share2,
-  ArrowRight,
 } from "lucide-react";
 import { Button, Input, Skeleton, Chip } from "../components/ui";
 import { supabase } from "../lib/supabase";
@@ -108,13 +101,13 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
           setRatingPoints(points as RatingPoint[]);
         }
 
-        // Fetch match history
+        // Fetch past 20 matches for match history table
         const { data: matchData } = await supabase
           .from("rating_history")
-          .select("*")
+          .select("id, mode, opponent_label, opponent_rating, result, rating_before, rating_after, delta, time_control, created_at")
           .eq("user_id", prof.id)
           .order("created_at", { ascending: false })
-          .limit(30);
+          .limit(20);
 
         if (matchData && alive) {
           setMatches(matchData as MatchHistoryItem[]);
@@ -179,12 +172,8 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
 
       setProfile(data as ProfileType);
       setIsEditing(false);
-    } catch (e: any) {
-      if (e.code === "23505") {
-        setSaveError("This username is already taken. Please choose another.");
-      } else {
-        setSaveError(e.message ?? "Failed to save profile.");
-      }
+    } catch (err: any) {
+      setSaveError(err.message ?? "Failed to update profile.");
     } finally {
       setSaveBusy(false);
     }
@@ -225,12 +214,12 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
       <div className="w-full overflow-x-auto py-2">
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full max-w-xl mx-auto overflow-visible">
           {/* Subtle grid lines */}
-          <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
-          <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
-          <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
+          <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="var(--outline-variant)" strokeDasharray="3 3" />
+          <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="var(--outline-variant)" strokeDasharray="3 3" />
+          <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="var(--outline-variant)" strokeDasharray="3 3" />
 
           {/* Line Chart */}
-          <path d={pathData} fill="none" stroke="#81b64c" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <path d={pathData} fill="none" stroke="var(--primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
 
           {/* Dots on points */}
           {coords.map((c, idx) => (
@@ -239,7 +228,7 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
               cx={c.x}
               cy={c.y}
               r="3.5"
-              fill="#81b64c"
+              fill="var(--primary)"
               className="hover:r-5 transition-all cursor-pointer"
             >
               <title>{`${c.val} Elo (${ratingPoints[idx]?.result})`}</title>
@@ -252,17 +241,20 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
-        <Skeleton className="h-44 w-full rounded-3xl" />
-        <Skeleton className="h-64 w-full rounded-3xl" />
+      <div className="max-w-5xl mx-auto space-y-6 pb-12 animate-pulse">
+        <div className="h-44 rounded-3xl bg-[var(--surface)] border border-[var(--outline)]" />
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+          <div className="md:col-span-5 h-56 rounded-3xl bg-[var(--surface)] border border-[var(--outline)]" />
+          <div className="md:col-span-7 h-56 rounded-3xl bg-[var(--surface)] border border-[var(--outline)]" />
+        </div>
       </div>
     );
   }
 
   if (error || !profile) {
     return (
-      <div className="max-w-md mx-auto text-center py-16 space-y-4">
-        <h2 className="text-xl font-bold text-stone-200">{error ?? "User not found."}</h2>
+      <div className="max-w-md mx-auto mt-12 text-center p-8 rounded-3xl bg-[var(--surface)] border border-red-500/30">
+        <p className="text-red-500 dark:text-red-400 font-semibold mb-4">{error ?? "User not found"}</p>
         <Button variant="outlined" onClick={() => window.history.back()}>
           Go Back
         </Button>
@@ -274,9 +266,9 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
   const isProvisional = gamesCount < 20;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+    <div className="max-w-5xl mx-auto space-y-6 pb-12">
       {/* Profile Header Card */}
-      <div className="rounded-3xl bg-[#262522] border border-white/10 p-6 sm:p-8 shadow-sm relative overflow-hidden">
+      <div className="rounded-3xl bg-[var(--surface)] border border-[var(--outline)] p-6 sm:p-8 shadow-sm relative overflow-hidden">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
           {/* Avatar */}
           <div className="relative">
@@ -284,10 +276,10 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
               <img
                 src={profile.avatar_url}
                 alt=""
-                className="size-24 rounded-2xl object-cover border-2 border-white/15 shadow-md"
+                className="size-24 rounded-2xl object-cover border-2 border-[var(--outline)] shadow-md"
               />
             ) : (
-              <div className="grid size-24 place-items-center rounded-2xl bg-[#302e2b] border border-white/10 text-3xl font-black font-heading text-stone-200">
+              <div className="grid size-24 place-items-center rounded-2xl bg-[var(--surface-container)] border border-[var(--outline)] text-3xl font-black font-heading text-[var(--on-surface)]">
                 {profile.display_name[0]?.toUpperCase() ?? "P"}
               </div>
             )}
@@ -297,10 +289,10 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
           <div className="flex-1 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-black font-heading text-stone-100 tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-black font-heading text-[var(--on-surface)] tracking-tight">
                   {profile.display_name}
                 </h1>
-                <p className="text-xs sm:text-sm text-stone-400 font-mono mt-0.5">
+                <p className="text-xs sm:text-sm text-[var(--on-surface-variant)] font-mono mt-0.5">
                   @{profile.username}
                 </p>
               </div>
@@ -318,20 +310,20 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
             </div>
 
             {profile.bio && (
-              <p className="mt-3 text-sm text-stone-300 font-medium max-w-xl">
+              <p className="mt-3 text-sm text-[var(--on-surface-variant)] font-medium max-w-xl">
                 {profile.bio}
               </p>
             )}
 
-            <div className="mt-4 flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs text-stone-400">
+            <div className="mt-4 flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs text-[var(--on-surface-variant)]">
               {profile.country && (
                 <span className="flex items-center gap-1.5">
-                  <Globe size={14} className="text-stone-400" />
+                  <Globe size={14} className="text-[var(--on-surface-variant)]" />
                   {profile.country}
                 </span>
               )}
               <span className="flex items-center gap-1.5">
-                <Calendar size={14} className="text-stone-400" />
+                <Calendar size={14} className="text-[var(--on-surface-variant)]" />
                 Joined {new Date(profile.created_at || Date.now()).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
               </span>
             </div>
@@ -340,10 +332,10 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
 
         {/* Inline Edit Form */}
         {isEditing && (
-          <div className="mt-6 pt-6 border-t border-white/10 space-y-4 animate-in fade-in">
+          <div className="mt-6 pt-6 border-t border-[var(--outline)] space-y-4 animate-in fade-in">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-stone-400 block mb-1">
+                <label className="text-xs font-bold text-[var(--on-surface-variant)] block mb-1">
                   Display Name
                 </label>
                 <Input
@@ -354,7 +346,7 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-stone-400 block mb-1">
+                <label className="text-xs font-bold text-[var(--on-surface-variant)] block mb-1">
                   Username (unique, 14-day lock)
                 </label>
                 <Input
@@ -366,7 +358,7 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-stone-400 block mb-1">
+              <label className="text-xs font-bold text-[var(--on-surface-variant)] block mb-1">
                 Bio (max 160 characters)
               </label>
               <Input
@@ -378,7 +370,7 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
             </div>
 
             {saveError && (
-              <p className="text-xs text-red-400 font-medium">{saveError}</p>
+              <p className="text-xs text-red-500 dark:text-red-400 font-medium">{saveError}</p>
             )}
 
             <div className="flex items-center gap-2 justify-end pt-2">
@@ -409,56 +401,56 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
       {/* Rating & Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
         {/* Rating Card */}
-        <div className="md:col-span-5 rounded-3xl bg-[#262522] border border-white/10 p-6 flex flex-col justify-between shadow-sm">
+        <div className="md:col-span-5 rounded-3xl bg-[var(--surface)] border border-[var(--outline)] p-6 flex flex-col justify-between shadow-sm">
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)]">
                 Elo Rating
               </span>
-              <span className="flex items-center gap-1 text-xs text-[#e5b84b] font-semibold">
+              <span className="flex items-center gap-1 text-xs text-[var(--tertiary)] font-semibold">
                 <Trophy size={14} /> Peak: {profile.peak_rating}
               </span>
             </div>
 
             <div className="mt-3 flex items-baseline gap-3">
-              <span className="font-mono text-5xl font-black text-stone-100 tracking-tight">
+              <span className="font-mono text-5xl font-black text-[var(--on-surface)] tracking-tight">
                 {profile.rating}
               </span>
               {isProvisional && (
-                <span className="rounded-full border border-[#e5b84b]/40 bg-[#e5b84b]/10 px-2 py-0.5 font-mono text-xs font-bold text-[#e5b84b]">
+                <span className="rounded-full border border-[var(--tertiary)]/40 bg-[var(--tertiary)]/10 px-2 py-0.5 font-mono text-xs font-bold text-[var(--tertiary)]">
                   Provisional
                 </span>
               )}
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-4 gap-2 border-t border-white/10 pt-4 text-center">
+          <div className="mt-6 grid grid-cols-4 gap-2 border-t border-[var(--outline)] pt-4 text-center">
             <div>
-              <span className="text-[10px] text-stone-400 block font-medium">Played</span>
-              <span className="font-mono text-sm font-bold text-stone-200">{gamesCount}</span>
+              <span className="text-[10px] text-[var(--on-surface-variant)] block font-medium">Played</span>
+              <span className="font-mono text-sm font-bold text-[var(--on-surface)]">{gamesCount}</span>
             </div>
             <div>
-              <span className="text-[10px] text-stone-400 block font-medium">Wins</span>
-              <span className="font-mono text-sm font-bold text-[#81b64c]">{profile.wins}</span>
+              <span className="text-[10px] text-[var(--on-surface-variant)] block font-medium">Wins</span>
+              <span className="font-mono text-sm font-bold text-[var(--primary)]">{profile.wins}</span>
             </div>
             <div>
-              <span className="text-[10px] text-stone-400 block font-medium">Draws</span>
-              <span className="font-mono text-sm font-bold text-amber-400">{profile.draws}</span>
+              <span className="text-[10px] text-[var(--on-surface-variant)] block font-medium">Draws</span>
+              <span className="font-mono text-sm font-bold text-amber-500">{profile.draws}</span>
             </div>
             <div>
-              <span className="text-[10px] text-stone-400 block font-medium">Losses</span>
+              <span className="text-[10px] text-[var(--on-surface-variant)] block font-medium">Losses</span>
               <span className="font-mono text-sm font-bold text-red-400">{profile.losses}</span>
             </div>
           </div>
         </div>
 
         {/* Rating History Chart Card */}
-        <div className="md:col-span-7 rounded-3xl bg-[#262522] border border-white/10 p-6 flex flex-col justify-between shadow-sm">
+        <div className="md:col-span-7 rounded-3xl bg-[var(--surface)] border border-[var(--outline)] p-6 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)]">
               Rating Progress
             </span>
-            <span className="text-xs font-mono text-stone-400">
+            <span className="text-xs font-mono text-[var(--on-surface-variant)]">
               Last {ratingPoints.length} games
             </span>
           </div>
@@ -467,13 +459,13 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
             {ratingChart ? (
               ratingChart
             ) : (
-              <p className="py-8 text-center text-xs text-stone-400">
+              <p className="py-8 text-center text-xs text-[var(--on-surface-variant)]">
                 Not enough match history to chart yet.
               </p>
             )}
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-stone-400 border-t border-white/5 pt-2 font-mono">
+          <div className="flex items-center justify-between text-[11px] text-[var(--on-surface-variant)] border-t border-[var(--outline-variant)] pt-2 font-mono">
             <span>Low: {ratingPoints.length ? Math.min(...ratingPoints.map((p) => p.rating_after)) : profile.rating}</span>
             <span>High: {profile.peak_rating}</span>
           </div>
@@ -481,9 +473,9 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
       </div>
 
       {/* Match History Table Card */}
-      <div className="rounded-3xl bg-[#262522] border border-white/10 p-6 shadow-sm space-y-4">
+      <div className="rounded-3xl bg-[var(--surface)] border border-[var(--outline)] p-6 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h2 className="text-lg font-bold font-heading text-stone-100">
+          <h2 className="text-lg font-bold font-heading text-[var(--on-surface)]">
             Match History
           </h2>
 
@@ -501,11 +493,11 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
         </div>
 
         {filteredMatches.length === 0 ? (
-          <p className="py-10 text-center text-xs text-stone-400">
+          <p className="py-10 text-center text-xs text-[var(--on-surface-variant)]">
             No matches found in this category.
           </p>
         ) : (
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-[var(--outline-variant)]">
             {filteredMatches.map((match) => (
               <div
                 key={match.id}
@@ -515,23 +507,23 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
                   <span
                     className={`rounded-lg px-2 py-0.5 font-mono text-xs font-bold uppercase ${
                       match.result === "win"
-                        ? "bg-[#81b64c]/20 text-[#81b64c]"
+                        ? "bg-[var(--primary)]/20 text-[var(--primary)]"
                         : match.result === "loss"
                         ? "bg-red-500/20 text-red-400"
-                        : "bg-amber-500/20 text-amber-300"
+                        : "bg-amber-500/20 text-amber-500"
                     }`}
                   >
                     {match.result}
                   </span>
 
                   <div>
-                    <span className="text-sm font-semibold text-stone-200 block">
+                    <span className="text-sm font-semibold text-[var(--on-surface)] block">
                       vs {match.opponent_label}{" "}
-                      <span className="font-mono text-xs text-stone-400">
+                      <span className="font-mono text-xs text-[var(--on-surface-variant)]">
                         ({match.opponent_rating})
                       </span>
                     </span>
-                    <span className="text-[11px] text-stone-400 capitalize">
+                    <span className="text-[11px] text-[var(--on-surface-variant)] capitalize">
                       {match.mode} • {match.time_control ?? "Standard"}
                     </span>
                   </div>
@@ -541,15 +533,15 @@ export default function Profile({ currentUserId, targetUsername }: Props) {
                   <span
                     className={`font-mono text-sm font-bold block ${
                       match.delta > 0
-                        ? "text-[#81b64c]"
+                        ? "text-[var(--primary)]"
                         : match.delta < 0
                         ? "text-red-400"
-                        : "text-stone-400"
+                        : "text-[var(--on-surface-variant)]"
                     }`}
                   >
                     {match.delta > 0 ? `+${match.delta}` : match.delta}
                   </span>
-                  <span className="text-[10px] text-stone-400">
+                  <span className="text-[10px] text-[var(--on-surface-variant)]">
                     {new Date(match.created_at).toLocaleDateString()}
                   </span>
                 </div>

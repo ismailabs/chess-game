@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { RefreshCw, Users, Zap } from "lucide-react";
-import { Card, TimeControlPicker } from "../components/ui";
+import { Button, Card, TimeControlPicker } from "../components/ui";
 import GameView from "../components/GameView";
 import { act } from "../lib/api";
 import { errMsg } from "../lib/format";
@@ -122,68 +122,69 @@ function Lobby({
   );
 
   return (
-    <div className="mx-auto max-w-xl space-y-5">
-      {/* Matchmaking Card */}
-      <Card className="bg-[#262522] border-white/10 space-y-5 p-6 sm:p-8 shadow-xl">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs font-semibold text-[#81b64c] mb-2">
-            <span className="size-1.5 rounded-full bg-[#81b64c] animate-pulse" />
-            Live Matches
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-tight font-heading text-stone-100">
-            Play Online
-          </h1>
-          <p className="mt-1 text-xs sm:text-sm text-stone-400">
-            Get paired instantly with players across the globe or challenge friends directly.
-          </p>
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      {/* Header */}
+      <div>
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--outline)] bg-[var(--surface)] px-2.5 py-0.5 text-xs font-semibold text-[var(--primary)] mb-2 shadow-xs">
+          <span className="size-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
+          Live Matches
         </div>
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--on-surface)] font-heading">
+          Play Online
+        </h1>
+        <p className="mt-1 text-xs sm:text-sm text-[var(--on-surface-variant)]">
+          Get paired instantly with players across the globe or challenge friends directly.
+        </p>
+      </div>
 
+      {/* Matchmaking Card */}
+      <Card className="bg-[var(--surface)] border-[var(--outline)] space-y-6 p-6 sm:p-8 shadow-sm">
         {waiting ? (
           <div role="status" className="flex flex-col items-center justify-center py-8 text-center space-y-4">
             <div className="relative">
-              <div className="size-16 rounded-full border-2 border-[#81b64c]/20 border-t-[#81b64c] animate-spin" />
-              <div className="absolute inset-0 grid place-items-center text-[#81b64c]">
+              <div className="size-16 rounded-full border-2 border-[var(--primary)]/20 border-t-[var(--primary)] animate-spin" />
+              <div className="absolute inset-0 grid place-items-center text-[var(--primary)]">
                 <Zap size={22} />
               </div>
             </div>
             <div>
-              <p className="text-base font-bold text-stone-100 font-heading">
+              <p className="text-base font-bold text-[var(--on-surface)] font-heading">
                 Searching for a {tc === "unlimited" ? "Unlimited" : tc} opponent…
               </p>
-              <p className="text-xs font-mono text-[#81b64c] font-bold mt-1">Elapsed: {secs}s</p>
-              <p className="text-xs text-stone-400 mt-0.5">Colors will be assigned randomly upon pairing.</p>
+              <p className="text-xs font-mono text-[var(--primary)] font-bold mt-1">Elapsed: {secs}s</p>
+              <p className="text-xs text-[var(--on-surface-variant)] mt-0.5">Colors will be assigned randomly upon pairing.</p>
             </div>
-            <button type="button" className="btn mt-2 !px-6" onClick={cancel}>
+            <Button variant="outlined" className="mt-2 px-6" onClick={cancel}>
               Cancel Matchmaking
-            </button>
+            </Button>
           </div>
         ) : (
           <>
             <div>
-              <p className="mb-2.5 text-xs font-bold uppercase tracking-wider text-stone-400">
+              <p className="mb-2.5 text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)]">
                 Choose Time Control
               </p>
               <TimeControlPicker value={tc} onChange={setTc} />
             </div>
 
             <div className="flex flex-col gap-2.5 pt-3 sm:flex-row">
-              <button
-                type="button"
-                className="btn btn-primary flex-1 !py-3 text-sm font-bold shadow-md"
+              <Button
+                variant="filled"
+                className="flex-1 py-3 text-sm font-bold shadow-md"
                 disabled={busy}
                 onClick={find}
               >
                 <Zap size={16} /> {busy ? "Connecting…" : "Find Opponent"}
-              </button>
+              </Button>
 
               {onOpenFriends && (
-                <button
-                  type="button"
-                  className="btn flex-1 !py-3 text-sm font-semibold"
+                <Button
+                  variant="outlined"
+                  className="flex-1 py-3 text-sm font-semibold"
                   onClick={onOpenFriends}
                 >
-                  <Users size={16} className="text-[#81b64c]" /> Challenge Friend
-                </button>
+                  <Users size={16} className="text-[var(--primary)]" /> Challenge Friend
+                </Button>
               )}
             </div>
           </>
@@ -192,7 +193,7 @@ function Lobby({
         {err && (
           <div
             role="alert"
-            className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300"
+            className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-500 dark:text-red-400 font-medium"
           >
             {err}
           </div>
@@ -201,8 +202,8 @@ function Lobby({
 
       {/* Active Ongoing Games */}
       {active.length > 0 && (
-        <Card className="bg-[#262522] border-white/10 p-5 shadow-xl">
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-stone-400">
+        <Card className="bg-[var(--surface)] border-[var(--outline)] p-5 shadow-sm">
+          <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)]">
             Active Games in Progress
           </h2>
           <ul className="space-y-2">
@@ -214,22 +215,22 @@ function Lobby({
                 <li key={g.id}>
                   <button
                     type="button"
-                    className="btn w-full justify-between !py-2.5 !px-3.5 bg-[#302e2b] hover:bg-[#383632]"
+                    className="w-full flex items-center justify-between rounded-xl py-2.5 px-3.5 border border-[var(--outline)] bg-[var(--surface-container)] hover:bg-[var(--surface-container-high)] text-[var(--on-surface)] transition-all cursor-pointer"
                     onClick={() => navigate(`/online/${g.id}`)}
                   >
                     <div className="flex items-center gap-2.5">
                       <span
                         className={`size-2.5 rounded-full ${
                           oppStatus === "online"
-                            ? "bg-[#81b64c]"
+                            ? "bg-[var(--primary)]"
                             : oppStatus === "in-game"
                             ? "bg-amber-400"
                             : "bg-stone-500"
                         }`}
                       />
-                      <span className="font-semibold text-stone-200">vs {oppName ?? "Opponent"}</span>
+                      <span className="font-semibold text-[var(--on-surface)]">vs {oppName ?? "Opponent"}</span>
                     </div>
-                    <span className="font-mono text-xs font-bold text-[#81b64c] bg-[#81b64c]/15 px-2.5 py-0.5 rounded-lg border border-[#81b64c]/20">
+                    <span className="font-mono text-xs font-bold text-[var(--primary)] bg-[var(--primary)]/15 px-2.5 py-0.5 rounded-lg border border-[var(--primary)]/20">
                       {g.tc === "unlimited" ? "Unlimited" : g.tc} · Resume
                     </span>
                   </button>

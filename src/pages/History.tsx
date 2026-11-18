@@ -72,44 +72,45 @@ function List({ userId }: { userId: string }) {
   };
 
   return (
-    <div className="mx-auto max-w-3xl pb-12">
-      <Card className="bg-[#262522] border-white/10 p-6 sm:p-8 space-y-6 shadow-xl">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs font-semibold text-stone-300 mb-2">
-            <HistoryIcon size={13} className="text-[#81b64c]" />
-            Match Archives
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-tight font-heading text-stone-100">
-            Game History
-          </h1>
-          <p className="mt-1 text-xs sm:text-sm text-stone-400">
-            Review past games, analyze move notations, and export PGN archives.
-          </p>
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      {/* Header */}
+      <div>
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--outline)] bg-[var(--surface)] px-2.5 py-0.5 text-xs font-semibold text-[var(--primary)] mb-2 shadow-xs">
+          <HistoryIcon size={13} className="text-[var(--primary)]" />
+          Match Archives
         </div>
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--on-surface)] font-heading">
+          Game History
+        </h1>
+        <p className="mt-1 text-xs sm:text-sm text-[var(--on-surface-variant)]">
+          Review past games, analyze move notations, and export PGN archives.
+        </p>
+      </div>
 
+      <Card className="bg-[var(--surface)] border-[var(--outline)] p-6 sm:p-8 space-y-6 shadow-sm">
         {err && (
           <div
             role="alert"
-            className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300"
+            className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-500 dark:text-red-400"
           >
             {err}{" "}
-            <button type="button" className="underline font-bold ml-1" onClick={load}>
+            <button type="button" className="underline font-bold ml-1 cursor-pointer" onClick={load}>
               Retry
             </button>
           </div>
         )}
 
         {!rows && !err && (
-          <p className="py-8 text-center text-sm text-stone-400">Loading match archives…</p>
+          <p className="py-8 text-center text-sm text-[var(--on-surface-variant)]">Loading match archives…</p>
         )}
 
         {rows && rows.length === 0 && (
-          <p className="py-12 text-center text-sm text-stone-400">
+          <p className="py-12 text-center text-sm text-[var(--on-surface-variant)]">
             No games recorded yet. Play online or against Stockfish to build your match history.
           </p>
         )}
 
-        <ul className="divide-y divide-white/10">
+        <ul className="divide-y divide-[var(--outline-variant)]">
           {rows?.map((g) => {
             const { opp, outcome } = info(g);
             return (
@@ -117,17 +118,17 @@ function List({ userId }: { userId: string }) {
                 <button
                   type="button"
                   onClick={() => navigate(`/history/${g.id}`)}
-                  className="flex w-full items-center justify-between gap-4 py-3.5 text-left rounded-xl px-3 hover:bg-white/5 transition-colors"
+                  className="flex w-full items-center justify-between gap-4 py-3.5 text-left rounded-xl px-3 hover:bg-[var(--surface-container-high)]/50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="grid size-9 place-items-center rounded-xl bg-[#383632] text-stone-300 shrink-0">
+                    <div className="grid size-9 place-items-center rounded-xl bg-[var(--surface-container-high)] text-[var(--on-surface)] shrink-0">
                       {g.mode === "ai" ? <Bot size={18} /> : <Swords size={18} />}
                     </div>
                     <div className="min-w-0">
-                      <div className="truncate font-bold text-sm text-stone-100">
+                      <div className="truncate font-bold text-sm text-[var(--on-surface)]">
                         {g.mode === "ai" ? "Computer" : "Online"} · {opp}
                       </div>
-                      <div className="flex items-center gap-2 text-xs font-mono text-stone-400 mt-0.5">
+                      <div className="flex items-center gap-2 text-xs font-mono text-[var(--on-surface-variant)] mt-0.5">
                         <span>{fmtDate(g.updated_at)}</span>
                         <span>·</span>
                         <span>{g.tc === "unlimited" ? "Unlimited" : g.tc}</span>
@@ -140,12 +141,12 @@ function List({ userId }: { userId: string }) {
                   <span
                     className={`rounded-lg px-2.5 py-1 text-xs font-bold font-mono shrink-0 whitespace-nowrap ${
                       outcome === "Win"
-                        ? "bg-[#81b64c]/20 text-[#81b64c] border border-[#81b64c]/30"
+                        ? "bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/30"
                         : outcome === "Loss"
                         ? "bg-red-500/20 text-red-400 border border-red-500/30"
                         : outcome === "Draw"
-                        ? "bg-white/10 text-stone-300 border border-white/10"
-                        : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                        ? "bg-[var(--surface-container)] text-[var(--on-surface-variant)] border border-[var(--outline)]"
+                        : "bg-amber-500/20 text-amber-500 border border-amber-500/30"
                     }`}
                   >
                     {g.status === "active" ? "In Progress" : outcome}

@@ -3,8 +3,8 @@
 // active game resume card, recent matches, and online friends strip.
 
 import { useEffect, useState } from "react";
-import { Swords, Bot, Users, Play, ArrowRight, Trophy, Flame } from "lucide-react";
-import { Button, Card, Skeleton } from "../components/ui";
+import { Swords, Bot, Users, Play, ArrowRight, Trophy } from "lucide-react";
+import { Button, Skeleton } from "../components/ui";
 import { navigate } from "../lib/router";
 import { supabase } from "../lib/supabase";
 import type { Profile } from "../lib/types";
@@ -129,7 +129,7 @@ export default function Home({ userId, onOpenFriends, onlineFriendsCount }: Prop
       <svg width={width} height={height} className="overflow-visible">
         <polyline
           fill="none"
-          stroke="#81b64c"
+          stroke="var(--primary)"
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -148,16 +148,16 @@ export default function Home({ userId, onOpenFriends, onlineFriendsCount }: Prop
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Top Banner: Active Game in Progress (if any) */}
       {activeGameId && (
-        <div className="flex items-center justify-between rounded-2xl bg-[#81b64c]/15 border border-[#81b64c]/30 p-4 shadow-sm animate-pulse">
+        <div className="flex items-center justify-between rounded-2xl bg-[var(--primary)]/15 border border-[var(--primary)]/30 p-4 shadow-sm animate-pulse">
           <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-[#81b64c] text-white">
+            <span className="grid size-10 place-items-center rounded-xl bg-[var(--primary)] text-white">
               <Play size={20} />
             </span>
             <div>
-              <h2 className="text-sm font-bold text-stone-100 font-heading">
+              <h2 className="text-sm font-bold text-[var(--on-surface)] font-heading">
                 Match in progress
               </h2>
-              <p className="text-xs text-stone-300">
+              <p className="text-xs text-[var(--on-surface-variant)]">
                 You have an active game waiting for you.
               </p>
             </div>
@@ -175,13 +175,13 @@ export default function Home({ userId, onOpenFriends, onlineFriendsCount }: Prop
       {/* Hero Grid: Rating Card & Quick Play Actions */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
         {/* Rating & Stats Card (Solid Surface per Law §2.2) */}
-        <div className="md:col-span-5 rounded-3xl bg-[#262522] border border-white/10 p-6 flex flex-col justify-between shadow-sm">
+        <div className="md:col-span-5 rounded-3xl bg-[var(--surface)] border border-[var(--outline)] p-6 flex flex-col justify-between shadow-sm">
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)]">
                 Your Elo Rating
               </span>
-              <span className="flex items-center gap-1 text-xs text-[#e5b84b] font-semibold">
+              <span className="flex items-center gap-1 text-xs text-[var(--tertiary)] font-semibold">
                 <Trophy size={14} /> Peak: {peakElo}
               </span>
             </div>
@@ -191,13 +191,13 @@ export default function Home({ userId, onOpenFriends, onlineFriendsCount }: Prop
                 <Skeleton className="h-12 w-28" />
               ) : (
                 <>
-                  <span className="font-mono text-5xl font-black text-stone-100 tracking-tight">
+                  <span className="font-mono text-5xl font-black text-[var(--on-surface)] tracking-tight">
                     {currentElo}
                   </span>
                   {isProvisional && (
                     <span
                       title="Provisional rating (< 20 games)"
-                      className="rounded-full border border-[#e5b84b]/40 bg-[#e5b84b]/10 px-2 py-0.5 font-mono text-xs font-bold text-[#e5b84b]"
+                      className="rounded-full border border-[var(--tertiary)]/40 bg-[var(--tertiary)]/10 px-2 py-0.5 font-mono text-xs font-bold text-[var(--tertiary)]"
                     >
                       Provisional
                     </span>
@@ -211,7 +211,7 @@ export default function Home({ userId, onOpenFriends, onlineFriendsCount }: Prop
               {sparklineSvg ? (
                 sparklineSvg
               ) : (
-                <p className="text-xs text-stone-400">
+                <p className="text-xs text-[var(--on-surface-variant)]">
                   Play rated games to see your rating curve.
                 </p>
               )}
@@ -219,22 +219,22 @@ export default function Home({ userId, onOpenFriends, onlineFriendsCount }: Prop
           </div>
 
           {/* Quick Stats Strip */}
-          <div className="mt-6 grid grid-cols-3 gap-2 border-t border-white/10 pt-4 text-center">
+          <div className="mt-6 grid grid-cols-3 gap-2 border-t border-[var(--outline)] pt-4 text-center">
             <div>
-              <span className="text-[11px] text-stone-400 block font-medium">Games</span>
-              <span className="font-mono text-base font-bold text-stone-200">
+              <span className="text-[11px] text-[var(--on-surface-variant)] block font-medium">Games</span>
+              <span className="font-mono text-base font-bold text-[var(--on-surface)]">
                 {gamesPlayed}
               </span>
             </div>
             <div>
-              <span className="text-[11px] text-stone-400 block font-medium">Wins</span>
-              <span className="font-mono text-base font-bold text-[#81b64c]">
+              <span className="text-[11px] text-[var(--on-surface-variant)] block font-medium">Wins</span>
+              <span className="font-mono text-base font-bold text-[var(--primary)]">
                 {profile?.wins ?? 0}
               </span>
             </div>
             <div>
-              <span className="text-[11px] text-stone-400 block font-medium">Win Rate</span>
-              <span className="font-mono text-base font-bold text-stone-200">
+              <span className="text-[11px] text-[var(--on-surface-variant)] block font-medium">Win Rate</span>
+              <span className="font-mono text-base font-bold text-[var(--on-surface)]">
                 {gamesPlayed > 0
                   ? `${Math.round(((profile?.wins ?? 0) / gamesPlayed) * 100)}%`
                   : "—"}
@@ -249,21 +249,21 @@ export default function Home({ userId, onOpenFriends, onlineFriendsCount }: Prop
           <button
             type="button"
             onClick={() => navigate("/play")}
-            className="group relative flex flex-col justify-between rounded-3xl bg-[#262522] border border-white/10 p-6 text-left shadow-sm transition-all duration-200 hover:border-[#81b64c]/50 hover:bg-[#2c2a26] active:scale-[0.99] cursor-pointer"
+            className="group relative flex flex-col justify-between rounded-3xl bg-[var(--surface)] border border-[var(--outline)] p-6 text-left shadow-sm transition-all duration-200 hover:border-[var(--primary)]/50 hover:bg-[var(--surface-container-high)] active:scale-[0.99] cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-12 place-items-center rounded-2xl bg-[#81b64c]/15 text-[#81b64c]">
+              <div className="grid size-12 place-items-center rounded-2xl bg-[var(--primary)]/15 text-[var(--primary)]">
                 <Swords size={24} />
               </div>
-              <span className="rounded-full bg-[#81b64c]/20 px-2.5 py-1 text-[11px] font-bold text-[#81b64c]">
+              <span className="rounded-full bg-[var(--primary)]/20 px-2.5 py-1 text-[11px] font-bold text-[var(--primary)]">
                 Rated
               </span>
             </div>
             <div className="mt-8">
-              <h3 className="text-xl font-black font-heading text-stone-100 group-hover:text-[#81b64c] transition-colors">
+              <h3 className="text-xl font-black font-heading text-[var(--on-surface)] group-hover:text-[var(--primary)] transition-colors">
                 Play online
               </h3>
-              <p className="mt-1 text-xs text-stone-400">
+              <p className="mt-1 text-xs text-[var(--on-surface-variant)]">
                 Match with players in Bullet, Blitz, or Rapid.
               </p>
             </div>
@@ -273,21 +273,21 @@ export default function Home({ userId, onOpenFriends, onlineFriendsCount }: Prop
           <button
             type="button"
             onClick={() => navigate("/bots")}
-            className="group relative flex flex-col justify-between rounded-3xl bg-[#262522] border border-white/10 p-6 text-left shadow-sm transition-all duration-200 hover:border-[#e5b84b]/50 hover:bg-[#2c2a26] active:scale-[0.99] cursor-pointer"
+            className="group relative flex flex-col justify-between rounded-3xl bg-[var(--surface)] border border-[var(--outline)] p-6 text-left shadow-sm transition-all duration-200 hover:border-[var(--tertiary)]/50 hover:bg-[var(--surface-container-high)] active:scale-[0.99] cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-12 place-items-center rounded-2xl bg-[#e5b84b]/15 text-[#e5b84b]">
+              <div className="grid size-12 place-items-center rounded-2xl bg-[var(--tertiary)]/15 text-[var(--tertiary)]">
                 <Bot size={24} />
               </div>
-              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-stone-300">
+              <span className="rounded-full bg-[var(--surface-container)] border border-[var(--outline)] px-2.5 py-1 text-[11px] font-bold text-[var(--on-surface-variant)]">
                 14 Levels
               </span>
             </div>
             <div className="mt-8">
-              <h3 className="text-xl font-black font-heading text-stone-100 group-hover:text-[#e5b84b] transition-colors">
+              <h3 className="text-xl font-black font-heading text-[var(--on-surface)] group-hover:text-[var(--tertiary)] transition-colors">
                 Play a bot
               </h3>
-              <p className="mt-1 text-xs text-stone-400">
+              <p className="mt-1 text-xs text-[var(--on-surface-variant)]">
                 Climb the ladder from Pebble (250) to Zenith (3000+).
               </p>
             </div>
@@ -297,38 +297,38 @@ export default function Home({ userId, onOpenFriends, onlineFriendsCount }: Prop
           <button
             type="button"
             onClick={onOpenFriends}
-            className="sm:col-span-2 flex items-center justify-between rounded-2xl bg-[#262522] border border-white/10 px-6 py-4 shadow-sm transition-all duration-200 hover:border-white/20 hover:bg-[#2c2a26] active:scale-[0.99] cursor-pointer"
+            className="sm:col-span-2 flex items-center justify-between rounded-2xl bg-[var(--surface)] border border-[var(--outline)] px-6 py-4 shadow-sm transition-all duration-200 hover:border-[var(--outline-variant)] hover:bg-[var(--surface-container-high)] active:scale-[0.99] cursor-pointer"
           >
             <div className="flex items-center gap-4">
               <div className="grid size-10 place-items-center rounded-xl bg-sky-500/15 text-sky-400">
                 <Users size={20} />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-stone-100 font-heading">
+                <h4 className="text-sm font-bold text-[var(--on-surface)] font-heading">
                   Challenge a friend
                 </h4>
-                <p className="text-xs text-stone-400">
+                <p className="text-xs text-[var(--on-surface-variant)]">
                   {onlineFriendsCount > 0
                     ? `${onlineFriendsCount} friend${onlineFriendsCount > 1 ? "s" : ""} online right now`
                     : "Invite friends to play custom matches"}
                 </p>
               </div>
             </div>
-            <ArrowRight size={18} className="text-stone-400" />
+            <ArrowRight size={18} className="text-[var(--on-surface-variant)]" />
           </button>
         </div>
       </div>
 
       {/* Bottom Section: Recent Matches */}
-      <div className="rounded-3xl bg-[#262522] border border-white/10 p-6 shadow-sm">
+      <div className="rounded-3xl bg-[var(--surface)] border border-[var(--outline)] p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-bold text-stone-100 font-heading">
+          <h2 className="text-base font-bold text-[var(--on-surface)] font-heading">
             Recent matches
           </h2>
           <Button
             variant="ghost"
             onClick={() => navigate("/history")}
-            className="text-xs text-stone-400 hover:text-stone-200"
+            className="text-xs text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
           >
             View all history <ArrowRight size={14} />
           </Button>
@@ -341,11 +341,11 @@ export default function Home({ userId, onOpenFriends, onlineFriendsCount }: Prop
             <Skeleton className="h-12 w-full" />
           </div>
         ) : recentGames.length === 0 ? (
-          <p className="py-6 text-center text-xs text-stone-400">
+          <p className="py-6 text-center text-xs text-[var(--on-surface-variant)]">
             No games played yet. Start your first match above!
           </p>
         ) : (
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-[var(--outline-variant)]">
             {recentGames.map((game) => (
               <div
                 key={game.id}
@@ -355,19 +355,19 @@ export default function Home({ userId, onOpenFriends, onlineFriendsCount }: Prop
                   <span
                     className={`rounded-lg px-2 py-0.5 font-mono text-[11px] font-bold uppercase ${
                       game.result === "win"
-                        ? "bg-[#81b64c]/20 text-[#81b64c]"
+                        ? "bg-[var(--primary)]/20 text-[var(--primary)]"
                         : game.result === "loss"
                         ? "bg-red-500/20 text-red-400"
-                        : "bg-amber-500/20 text-amber-300"
+                        : "bg-amber-500/20 text-amber-500"
                     }`}
                   >
                     {game.result}
                   </span>
                   <div>
-                    <span className="text-sm font-semibold text-stone-200 block">
+                    <span className="text-sm font-semibold text-[var(--on-surface)] block">
                       vs {game.opponent}
                     </span>
-                    <span className="text-[11px] text-stone-400 capitalize">
+                    <span className="text-[11px] text-[var(--on-surface-variant)] capitalize">
                       {game.mode} game
                     </span>
                   </div>
@@ -377,15 +377,15 @@ export default function Home({ userId, onOpenFriends, onlineFriendsCount }: Prop
                   <span
                     className={`font-mono text-sm font-bold block ${
                       game.delta > 0
-                        ? "text-[#81b64c]"
+                        ? "text-[var(--primary)]"
                         : game.delta < 0
                         ? "text-red-400"
-                        : "text-stone-400"
+                        : "text-[var(--on-surface-variant)]"
                     }`}
                   >
                     {game.delta > 0 ? `+${game.delta}` : game.delta}
                   </span>
-                  <span className="text-[10px] text-stone-400">
+                  <span className="text-[10px] text-[var(--on-surface-variant)]">
                     {new Date(game.created_at).toLocaleDateString()}
                   </span>
                 </div>
