@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import {
   LogOut,
   Settings as SettingsIcon,
@@ -10,15 +10,6 @@ import { AuthProvider, useAuth } from "./lib/auth";
 import { matchRoute, navigate, usePath } from "./lib/router";
 import { configError, supabase } from "./lib/supabase";
 import { Card, ThemeToggle } from "./components/ui";
-import Home from "./pages/Home";
-import Online from "./pages/Online";
-import Bots from "./pages/Bots";
-import Leaderboard from "./pages/Leaderboard";
-import ProfilePage from "./pages/Profile";
-import History from "./pages/History";
-import Settings from "./pages/Settings";
-import DevKit from "./pages/DevKit";
-import GameView from "./components/GameView";
 import FriendsModal from "./components/FriendsModal";
 import InviteModal from "./components/InviteModal";
 import ChallengeToast from "./components/ChallengeToast";
@@ -29,6 +20,27 @@ import { usePresence } from "./hooks/usePresence";
 import { useFriendInvites } from "./hooks/useFriendInvites";
 import { isMuted, setMuted } from "./lib/sounds";
 import type { Friendship, Profile } from "./lib/types";
+
+// Lazy-loaded routes for optimal initial bundle size (< 180 KB gz)
+const Home = React.lazy(() => import("./pages/Home"));
+const Online = React.lazy(() => import("./pages/Online"));
+const Bots = React.lazy(() => import("./pages/Bots"));
+const Leaderboard = React.lazy(() => import("./pages/Leaderboard"));
+const ProfilePage = React.lazy(() => import("./pages/Profile"));
+const History = React.lazy(() => import("./pages/History"));
+const Settings = React.lazy(() => import("./pages/Settings"));
+const DevKit = React.lazy(() => import("./pages/DevKit"));
+const GameView = React.lazy(() => import("./components/GameView"));
+
+function PageSkeleton() {
+  return (
+    <div className="mx-auto max-w-4xl space-y-4 py-8 animate-pulse">
+      <div className="h-8 w-48 rounded-xl bg-white/10" />
+      <div className="h-4 w-72 rounded-lg bg-white/5" />
+      <div className="mt-8 h-64 w-full rounded-2xl bg-white/5" />
+    </div>
+  );
+}
 
 export default function App() {
   return (
@@ -219,34 +231,36 @@ function Shell() {
 
         {/* Dynamic Route Content */}
         <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-          {route.name === "home" ? (
-            <Home
-              userId={user.id}
-              onOpenFriends={() => setShowFriends(true)}
-              onlineFriendsCount={onlineFriendsCount}
-            />
-          ) : route.name === "bots" || route.name === "computer" ? (
-            <Bots userId={user.id} gameId={route.params.id} />
-          ) : route.name === "leaderboard" ? (
-            <Leaderboard currentUserId={user.id} />
-          ) : route.name === "history" ? (
-            <History userId={user.id} gameId={route.params.id} />
-          ) : route.name === "profile" ? (
-            <ProfilePage currentUserId={user.id} />
-          ) : route.name === "user" ? (
-            <ProfilePage currentUserId={user.id} targetUsername={route.params.username} />
-          ) : route.name === "settings" ? (
-            <Settings />
-          ) : route.name === "game" ? (
-            <GameView gameId={route.params.id} userId={user.id} backTo="/play" />
-          ) : (
-            <Online
-              userId={user.id}
-              gameId={route.params.id}
-              onOpenFriends={() => setShowFriends(true)}
-              getStatus={getStatus}
-            />
-          )}
+          <Suspense fallback={<PageSkeleton />}>
+            {route.name === "home" ? (
+              <Home
+                userId={user.id}
+                onOpenFriends={() => setShowFriends(true)}
+                onlineFriendsCount={onlineFriendsCount}
+              />
+            ) : route.name === "bots" || route.name === "computer" ? (
+              <Bots userId={user.id} gameId={route.params.id} />
+            ) : route.name === "leaderboard" ? (
+              <Leaderboard currentUserId={user.id} />
+            ) : route.name === "history" ? (
+              <History userId={user.id} gameId={route.params.id} />
+            ) : route.name === "profile" ? (
+              <ProfilePage currentUserId={user.id} />
+            ) : route.name === "user" ? (
+              <ProfilePage currentUserId={user.id} targetUsername={route.params.username} />
+            ) : route.name === "settings" ? (
+              <Settings />
+            ) : route.name === "game" ? (
+              <GameView gameId={route.params.id} userId={user.id} backTo="/play" />
+            ) : (
+              <Online
+                userId={user.id}
+                gameId={route.params.id}
+                onOpenFriends={() => setShowFriends(true)}
+                getStatus={getStatus}
+              />
+            )}
+          </Suspense>
         </main>
 
         {/* Global Footer (Desktop) */}
