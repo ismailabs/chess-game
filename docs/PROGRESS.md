@@ -191,15 +191,22 @@
   - PWA & Offline: PASSED (`sw.js` and `manifest.webmanifest` verified)
 - **Next Up:** Merge `v2/quality` into `main`, then complete Phase 9 (QA, Docs & Release).
 
-## 2026-11-18 — Phase 9: QA, Docs & Release
+## 2026-11-19 — Phase 10: Audit, Debug & Polish
 - **Status:** COMPLETED
 - **Actions Completed:**
-  - Verified complete test suite: 36/36 tests passing (rating math, game rules, bots ladder).
-  - Verified production build and code-splitting chunks.
-  - Updated `README.md` with comprehensive v2 system documentation.
-  - Authored `docs/WALKTHROUGH.md` with complete architecture and feature tour.
-  - Updated `docs/OWNER_ACTIONS.md` with minimal manual verification steps for the owner.
-  - Audited all 16 Quality Gates in MASTER_PROMPT §16.
+  - Removed desktop sidebar (`NavRail`) for unauthenticated visitors, enabling full-width centered landing page.
+  - Implemented responsive top navbar with brand logo, links to "Play Bots" & "Leaderboard", ThemeToggle, Mute toggle, and "Sign in with Google" for logged-out visitors.
+  - Built offline/client-side guest bot match orchestrator in `src/lib/guestGame.ts` and `src/lib/api.ts`, enabling guest bot play across all 14 bot levels without requiring login.
+  - Redesigned `TimeControlPicker` into a clean 2-column layout where standard controls are paired and `Unlimited Casual` cleanly spans both columns (`col-span-2`), eliminating clipping and empty cells.
+  - Added Profile navigation item with `User` icon to `NavRail` with active route highlighting on `/profile`.
+  - Removed Stop Engine button and engine pause states in `GameView.tsx`.
+  - Added `sticky top-0 h-dvh overflow-y-auto scrollbar-thin` to `NavRail.tsx`, keeping sidebar permanently anchored to viewport during scrolling.
+  - Updated `ResultDialog.tsx` with guest match support and sign-in CTA.
+  - Added comprehensive unit tests in `tests/guestGame.test.ts` (41/41 passing).
 - **Gates:**
-  - All 16 Quality Gates PASSED.
+  - Build health: PASSED (`npm run typecheck && npm test && npm run build`)
+  - Vitest: 41/41 tests passing (100%)
+  - Bundle budget: Entry point 16.06 kB gzip (< 180 kB budget)
+  - Browser verification: PASSED across Light and Dark themes, guest bot gameplay, and layout.
+
 
