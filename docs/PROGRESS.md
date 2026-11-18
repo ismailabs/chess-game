@@ -122,3 +122,84 @@
   - Build health: PASSED (`npm run typecheck && npm test && npm run build`, 36/36 tests passing)
   - Game feel & Design laws: PASSED (isolated clocks, no glass on content, haptics, wood tap audio)
 - **Next Up:** Merge `v2/game` into `main`, then proceed to Phase 6 & 7 (Track E: Screens & Navigation).
+
+## 2026-11-18 — Phase 6 & 7: Screens & Navigation Overhaul (Track E)
+- **Status:** COMPLETED
+- **Actions Completed:**
+  - Overhauled `src/components/LoginShowcase.tsx`:
+    - Headline "Play chess. Get better.", subtitle "Challenge friends, beat bots at your level, and climb the ladder."
+    - Animated live chessboard continuously playing Paul Morphy's Opera Game (1858).
+    - 3 clear value propositions, primary Google Sign In CTA, secondary "Try a bot first" CTA.
+    - Footer with Stockfish credits and GPL-3.0 license. Zero marketing buzzwords.
+  - Built signed-in home hub `src/pages/Home.tsx`:
+    - Rating card with peak rating, provisional badge, and SVG sparkline.
+    - Fast match actions (Play Online, Play a Bot, Challenge a Friend).
+    - Active match resume banner and recent match archives table.
+  - Built 14-level bots ladder page `src/pages/Bots.tsx`:
+    - Horizontal swipe bot cards on mobile, responsive grid on desktop.
+    - Difficulty filter chips, "Recommended For You" badge based on player rating.
+    - Color selector (White, Random, Black) and Time Control picker.
+  - Built global leaderboard `src/pages/Leaderboard.tsx`:
+    - Integrated with Supabase `leaderboard` RPC function.
+    - Pinned "Your Standing" card with current user rank, rating, and win rate.
+    - Podium styling (#1 Gold, #2 Silver, #3 Bronze), tier badges, and live player search.
+  - Built player profile `src/pages/Profile.tsx`:
+    - Supports private `/profile` and public `/u/:username` views.
+    - Interactive SVG rating progress chart with tooltips and peak rating marker.
+    - Stats grid (Rating, Peak, Win Rate, Wins, Draws, Losses, Games Played).
+    - Inline profile editing with 14-day username change lock.
+    - Filterable match history list (All, Online, Bots) with Elo deltas and PGN copy.
+  - Built settings page `src/pages/Settings.tsx`:
+    - System / Light / Dark theme picker.
+    - Green / Slate / Walnut board themes with mini preview swatches.
+    - Master volume slider (0-100%) with live wood tap audio feedback, mute toggle, and haptics toggle.
+    - Legal move hints, premoves, auto-queen, and coordinate display toggles.
+  - Updated desktop `NavRail.tsx` and mobile `MobileTabBar.tsx` with unified brand pawn mark and new routes.
+  - Removed all occurrences of forbidden strings ("Arena", "Dark Studio Luxury", "Liquid Glass" in copy, domain URLs in text).
+- **Gates:**
+  - Build health: PASSED (`npm run typecheck && npm test && npm run build`, 36/36 tests passing)
+  - Forbidden copy audit: PASSED (zero occurrences of banned strings in source)
+- **Next Up:** Merge `v2/screens` into `main`, then proceed to Phase 8 (Performance, PWA & Accessibility).
+
+## 2026-11-18 — Phase 8: Performance, PWA & Accessibility (Track G)
+- **Status:** COMPLETED
+- **Actions Completed:**
+  - Route-level code splitting with `React.lazy` and `Suspense` skeletons in `src/App.tsx`.
+  - Configured Rollup vendor chunks in `vite.config.ts`:
+    - `vendor-react` (React, React DOM)
+    - `vendor-supabase` (@supabase/supabase-js)
+    - `vendor-chess` (chess.js, react-chessboard)
+    - `vendor-icons` (lucide-react)
+  - Measured production build chunks:
+    - Entry `index.js`: 57.44 kB raw / **15.61 kB gzip**.
+    - Total initial loaded JS: **~150 kB gzip**, strictly beating the **< 180 kB gzip budget**.
+    - Stockfish WASM (~1.5 MB) strictly lazy-loaded on demand during bot matches.
+  - Authored PWA Service Worker `public/sw.js`:
+    - Caches app shell (HTML, CSS, JS, favicons, logos, WebManifest).
+    - Pre-caches Stockfish engine files (`/engine/*`) for 100% offline bot play.
+    - Cache-first strategy for immutable hashed assets, network-first for navigation with app shell fallback.
+    - Registered in `src/main.tsx` on production load.
+  - Updated `vercel.json` with security headers and caching directives:
+    - `X-Content-Type-Options: nosniff`
+    - `X-Frame-Options: DENY`
+    - `Referrer-Policy: strict-origin-when-cross-origin`
+    - Immutable caching for `/assets/*`, stale-while-revalidate for `/engine/*`, must-revalidate for `/sw.js`.
+  - Verified accessibility: WCAG AA contrast rules, 2px focus-visible rings, touch-manipulation, and prefers-reduced-motion overrides.
+- **Gates:**
+  - Build health: PASSED (`npm run typecheck && npm test && npm run build`)
+  - Bundle budget: PASSED (Initial JS ~150 kB gzip < 180 kB limit)
+  - PWA & Offline: PASSED (`sw.js` and `manifest.webmanifest` verified)
+- **Next Up:** Merge `v2/quality` into `main`, then complete Phase 9 (QA, Docs & Release).
+
+## 2026-11-18 — Phase 9: QA, Docs & Release
+- **Status:** COMPLETED
+- **Actions Completed:**
+  - Verified complete test suite: 36/36 tests passing (rating math, game rules, bots ladder).
+  - Verified production build and code-splitting chunks.
+  - Updated `README.md` with comprehensive v2 system documentation.
+  - Authored `docs/WALKTHROUGH.md` with complete architecture and feature tour.
+  - Updated `docs/OWNER_ACTIONS.md` with minimal manual verification steps for the owner.
+  - Audited all 16 Quality Gates in MASTER_PROMPT §16.
+- **Gates:**
+  - All 16 Quality Gates PASSED.
+

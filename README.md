@@ -1,58 +1,98 @@
-# Chess
+# Chess by Ismail Studio (v2)
 
-Play online (Supabase matchmaking + Realtime), play Stockfish (WASM in a Web Worker), and replay your games.
-Stack: React + TypeScript + Vite, Tailwind 4, chess.js, react-chessboard, Supabase (Auth, Postgres, Realtime, one Edge Function).
+Play real-time chess with friends, challenge a 14-level bot ladder powered by Stockfish WASM, and climb the global Elo rating leaderboard.
 
-## 1. Create the project (empty repo)
+Live at: **https://chess.ismailstudio.my**
+
+---
+
+## Features
+
+- **Material 3 Expressive + Apple Liquid Glass**: Refined glass functional layer (navigation rail, mobile tab bar, action docks, result sheets) paired with solid content surfaces and zero-flash theme switching (System / Light / Dark).
+- **Tactile Board & Game Feel**: Pieces lift on drag (1.1x scale + drop shadow), smooth spring on release, legal move hints, radial crimson check glow, isolated non-re-rendering clocks, premove staging, and native haptic feedback.
+- **Synthesized Web Audio**: Realistic wooden piece clicks generated via physical acoustic noise transients and resonant filters with a master volume slider.
+- **Elo Rating System**: Single unified rating (starting at 800, mathematical floor at 100, 400-point clamp, K schedule 40/20/10) with anti-farming guards and complete rating history tracking.
+- **14-Level Bot Ladder**:
+  - Pebble (250) to Zenith (2600) + Stockfish Max (3000+) + Adaptive Coach.
+  - Custom humanized weakening layer (MultiPV candidate selection, softmax centipawn loss temperature, and tactical blunder injection).
+  - Server-verified bot rating submission via `record-bot-game` Edge Function.
+- **Comprehensive Screens**:
+  - Home: Play hub with rating card, SVG sparkline, resume game banner, and recent match history.
+  - Bots: 14 bot cards with difficulty filters and recommended bot badge.
+  - Leaderboard: Top 100 global players with podium styling and pinned personal rank.
+  - Profile: Public (`/u/:username`) and private (`/profile`) views with SVG rating progress chart, comprehensive stats, and match history.
+  - Settings: Board colors (Green, Slate, Walnut), theme toggles, audio volume, haptics, and gameplay assists.
+- **Performance & PWA**:
+  - Code-split routes with lazy-loaded Stockfish WASM.
+  - Initial JS bundle strictly **< 180 KB gzip** (~150 KB gzip).
+  - Offline bot play supported via PWA Service Worker (`/sw.js`).
+  - Security headers and immutable asset caching via `vercel.json`.
+
+---
+
+## Tech Stack
+
+- **Frontend**: React 19, TypeScript, Vite 6, Tailwind CSS 4, Lucide React, chess.js, react-chessboard
+- **Backend & Database**: Supabase (PostgreSQL 15, Auth, Realtime presence, Storage)
+- **Serverless**: Deno / Supabase Edge Functions (`game-action`, `record-bot-game`)
+- **Chess Engine**: Stockfish 18 lite WASM (single-threaded Web Worker)
+- **License**: GNU General Public License v3.0 (GPL-3.0)
+
+---
+
+## Local Development
+
+### 1. Prerequisites
+- Node.js 20+
+- npm 10+
+
+### 2. Setup
 ```bash
-npm create vite@latest . -- --template react-ts
+# Clone the repository
+git clone https://github.com/ismailabs/chess-game.git
+cd chess-game
+
+# Install dependencies
 npm install
-npm install @supabase/supabase-js chess.js react-chessboard stockfish lucide-react
-npm install -D tailwindcss @tailwindcss/vite vitest
-```
-Overwrite/add the files from this answer, delete the template leftovers (`src/App.css`, `src/assets`, `public/vite.svg`,
-`tsconfig.app.json`, `tsconfig.node.json`, `eslint.config.js`) and replace only the `scripts` block in `package.json`.
 
-```bash
+# Copy environment variables
 cp .env.example .env.local
-npm run dev            # copies Stockfish into public/engine, then starts Vite on http://localhost:5173
-npm run typecheck && npm test
-npm run build          # output: dist
 ```
 
-## 2. Database
-Open Supabase → SQL Editor → paste all of `supabase/migrations/0001_chess.sql` → Run. It is idempotent, adds the
-two tables to the existing `supabase_realtime` publication (it never drops or recreates it), and enables RLS.
-
-## 3. Edge Function `game-action`
+### 3. Development Server
 ```bash
-npx supabase login
-npx supabase functions deploy game-action --project-ref fhlpgtkftfhqcgppfnud --no-verify-jwt
+# Pre-bundles Stockfish WASM into public/engine and starts Vite
+npm run dev
 ```
-- JWT verification is done inside the function (`auth.getUser`) so it works with the new API-key system; hence `--no-verify-jwt`.
-- Required secrets: **none**. `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically in hosted functions.
-  Only if your project has the legacy service-role key disabled: `npx supabase secrets set SERVICE_KEY=<your secret key>` (server-side only).
-- Never put a secret/service-role key in any `VITE_` variable.
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-## 4. Auth redirect URLs (Supabase → Authentication → URL Configuration → Redirect URLs)
-Add only these (the Google provider itself is untouched):
-- `http://localhost:5173/**`
-- `https://chess.ismailstudio.my/**`
-- `https://*-<team>.vercel.app/**` (for preview deployments)
+### 4. Tests & Quality Gates
+```bash
+# Typecheck TypeScript definitions
+npm run typecheck
 
-## 5. Vercel
-Framework preset: Vite. Build command `npm run build`, output directory `dist`. Environment variables (Production + Preview):
-`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`. `vercel.json` handles SPA routing.
+# Run Vitest test suite (rating math, rules, bots ladder)
+npm test
 
-## Notes
-- **Engine**: Stockfish.js lite single-threaded WASM, copied from `node_modules/stockfish` by `scripts/copy-stockfish.mjs`, which also writes
-  `public/engine/manifest.json`. The engine picker lists only what that manifest contains; the version shown is the installed one.
-  No cross-origin-isolation headers are needed.
-- **Licence**: Stockfish and Stockfish.js are GPL-3.0. Because the app distributes them, publish this repository's source under
-  GPL-3.0-compatible terms and add the licence text (`curl -o LICENSE https://www.gnu.org/licenses/gpl-3.0.txt`). The footer links to the
-  Stockfish and stockfish.js sources. This is not legal advice.
-- **Clocks**: server stores remaining ms + `turn_started_at`; clients count down locally. Clocks start after each side's first move
-  (no increment on those two moves). The function validates elapsed time on every move and timeout claim.
-- **Draws**: threefold and 50-move are claimable (button appears when available); fivefold, 75-move, stalemate and insufficient material are automatic.
-  A flag fall is a draw when the opponent cannot possibly mate. Draw offers are online-only.
-- **Queue**: a waiting `games` row is the queue entry (unique per user); it is refreshed every 45 s and ignored by matchmaking after 2 min.
+# Production build and chunk analysis
+npm run build
+```
+
+---
+
+## Database Migrations & Edge Functions
+
+### Schema Migrations (`supabase/migrations/`)
+- `0001_chess.sql`: Core multiplayer matches, clocks, and moves table.
+- `0002_friends_and_invites.sql`: Friends system, social invites, and presence tracking.
+- `0003_profiles_elo.sql`: Elo rating system, anti-forgery profile triggers, atomic `apply_online_game_rating`, `rating_history`, `bot_games`, and `leaderboard` RPC.
+
+### Edge Functions (`supabase/functions/`)
+- `game-action`: Handles online matchmaking, move validation, flag timeouts, draw claims, and rating application.
+- `record-bot-game`: Replays and verifies completed bot games, computes rating delta, and enforces anti-farming caps.
+
+---
+
+## License
+
+This project is free and open-source software licensed under the **GNU General Public License v3.0 (GPL-3.0)**. See [LICENSE](LICENSE) for details. Stockfish is copyright the Stockfish developers and licensed under GPL-3.0.
