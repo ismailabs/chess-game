@@ -10,7 +10,6 @@ import {
   HelpCircle,
   RefreshCw,
   Share2,
-  Square as StopIcon,
   Volume2,
   VolumeX,
   WifiOff,
@@ -204,6 +203,9 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
       // Handle server-side rating recording for bot game
       if (game.mode === "ai" && !recordedBotGameRef.current) {
         recordedBotGameRef.current = true;
+        if (game.id.startsWith("guest-") || userId === "guest" || !userId) {
+          return;
+        }
         (async () => {
           try {
             const botEloMatch = (game.black_name ?? "").match(/\((\d+)\)/);
@@ -623,19 +625,9 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
                 <Cpu size={14} className="text-[var(--primary)]" />
                 {ai.status === "loading" && "Loading engine…"}
                 {ai.status === "thinking" && "Calculating…"}
-                {ai.status === "ready" && !ai.paused && "Engine ready"}
-                {ai.paused && "Engine paused"}
+                {ai.status === "ready" && "Engine ready"}
                 {ai.status === "error" && <span className="text-red-500">{ai.error}</span>}
               </span>
-              {ai.status === "thinking" && (
-                <button
-                  type="button"
-                  className="rounded-lg p-1 text-xs text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] hover:bg-[var(--surface-container-high)] flex items-center gap-1 cursor-pointer transition-colors"
-                  onClick={ai.stop}
-                >
-                  <StopIcon size={12} /> Stop
-                </button>
-              )}
             </div>
           )}
         </div>
@@ -774,7 +766,8 @@ function Play({ game, moves, live, online, sync, apply, userId, backTo }: PlayPr
         ratingBefore={resultDetails.ratingBefore}
         ratingAfter={resultDetails.ratingAfter}
         delta={resultDetails.delta}
-        onRematch={() => navigate("/play")}
+        isGuest={game.id.startsWith("guest-") || userId === "guest"}
+        onRematch={() => navigate(backTo)}
         onHome={() => navigate("/")}
       />
     </div>
