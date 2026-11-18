@@ -10,7 +10,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "icons": "node scripts/generate-icons.mjs",
+    "og": "node scripts/og/render.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

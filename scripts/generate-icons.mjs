@@ -55,73 +55,105 @@ function createPng(width, height, pixelFn) {
   }
 
   const rawData = Buffer.concat(rawRows);
-  const compressed = deflateSync(rawData);
+  const compressed = deflateSync(rawData, { level: 9 });
   const idat = makeChunk("IDAT", compressed);
   const iend = makeChunk("IEND", Buffer.alloc(0));
 
   return Buffer.concat([sig, ihdr, idat, iend]);
 }
 
-// Generate stylish icon: #25282d dark rounded background with #4d7a59 emerald knight silhouette
-function chessIconPixel(x, y, w, h) {
+// Geometric Pawn Pixel Evaluator
+function pawnPixel(nx, ny) {
+  // Check head
+  const headDist = Math.hypot(nx - 0.5, ny - 0.28);
+  const inHead = headDist <= 0.16;
+
+  // Check collar
+  const inCollar = ny >= 0.42 && ny <= 0.48 && Math.abs(nx - 0.5) <= 0.17;
+
+  // Check body (flaring bell shape)
+  let inBody = false;
+  if (ny >= 0.48 && ny <= 0.78) {
+    const progress = (ny - 0.48) / 0.30;
+    const halfWidth = 0.11 + 0.15 * Math.pow(progress, 1.8);
+    if (Math.abs(nx - 0.5) <= halfWidth) inBody = true;
+  }
+
+  // Check base plate
+  const inBase = ny >= 0.78 && ny <= 0.90 && Math.abs(nx - 0.5) <= 0.27;
+
+  if (!inHead && !inCollar && !inBody && !inBase) {
+    return null; // outside pawn
+  }
+
+  // Diagonal facet split: line through (0.5, 0) to (0.46, 1)
+  const splitX = 0.50 - 0.04 * ny;
+  const isLeft = nx < splitX;
+
+  if (isLeft) {
+    // Light emerald #81b64c with subtle top gradient
+    const shade = (1 - ny) * 0.25;
+    const r = Math.min(255, Math.round(0x81 + shade * 26));
+    const g = Math.min(255, Math.round(0xb6 + shade * 26));
+    const b = Math.min(255, Math.round(0x4c + shade * 18));
+    return [r, g, b, 255];
+  } else {
+    // Deep emerald #537a2e
+    const r = 0x53, g = 0x7a, b = 0x2e;
+    return [r, g, b, 255];
+  }
+}
+
+// 1. Transparent Favicon (for browser tabs)
+function faviconPixel(x, y, w, h) {
+  const p = pawnPixel(x / w, y / h);
+  return p || [0, 0, 0, 0];
+}
+
+// 2. App Icons with Container Background (Apple Touch & PWA)
+function appIconPixel(x, y, w, h, scale = 1.0) {
   const nx = x / w;
   const ny = y / h;
-  const rCorner = 0.2; // rounded corner radius
+
+  // Squircle rounded corners
+  const rCorner = 0.22;
   const cx = Math.min(Math.max(nx, rCorner), 1 - rCorner);
   const cy = Math.min(Math.max(ny, rCorner), 1 - rCorner);
   const distCorner = Math.hypot(nx - cx, ny - cy);
+
   if (distCorner > rCorner) {
-    return [0, 0, 0, 0]; // outside rounded rect
+    return [0, 0, 0, 0]; // outside squircle
   }
 
-  // Base background
-  let r = 0x25, g = 0x28, b = 0x2d, a = 255;
+  // Base background: #262522
+  let r = 0x26, g = 0x25, b = 0x22, a = 255;
 
-  // Knight silhouette approximation
-  const kx = (nx - 0.5) * 2; // -1 to 1
-  const ky = (ny - 0.5) * 2; // -1 to 1
-
-  // Base plate
-  if (ky > 0.6 && ky < 0.8 && Math.abs(kx) < 0.7) {
-    return [0x4d, 0x7a, 0x59, 255];
-  }
-  if (ky > 0.45 && ky <= 0.6 && Math.abs(kx) < 0.55) {
-    return [0x4d, 0x7a, 0x59, 255];
-  }
-  // Knight body / head
-  if (ky > -0.65 && ky <= 0.45) {
-    const neckLeft = -0.35 + (ky + 0.6) * 0.1;
-    const neckRight = 0.35 + (ky > 0 ? (0.45 - ky) * 0.2 : 0);
-    const snoutX = 0.55 - Math.max(0, ky + 0.2) * 0.5;
-    if (kx >= neckLeft && kx <= Math.max(neckRight, snoutX)) {
-      // Eye cutout
-      if (Math.hypot(kx - 0.15, ky - (-0.3)) < 0.08) {
-        return [0xf5, 0xf2, 0xea, 255];
-      }
-      return [0x4d, 0x7a, 0x59, 255];
-    }
+  // Specular top highlight
+  const isEdge = distCorner > rCorner - 0.02 || nx < 0.02 || nx > 0.98 || ny < 0.02 || ny > 0.98;
+  if (isEdge && (ny < 0.3 || nx < 0.3)) {
+    return [255, 255, 255, 45];
   }
 
-  // Subtle border glow
-  if (distCorner > rCorner - 0.02 || nx < 0.02 || nx > 0.98 || ny < 0.02 || ny > 0.98) {
-    return [0x3b, 0x40, 0x48, 255];
+  // Normalized pawn coordinates centered with optional scale
+  const px = (nx - 0.5) / scale + 0.5;
+  const py = (ny - 0.5) / scale + 0.5;
+
+  if (px >= 0 && px <= 1 && py >= 0 && py <= 1) {
+    const pawn = pawnPixel(px, py);
+    if (pawn) return pawn;
   }
 
   return [r, g, b, a];
 }
 
-const png180 = createPng(180, 180, chessIconPixel);
-writeFileSync("public/apple-touch-icon.png", png180);
-console.log("Created public/apple-touch-icon.png (180x180)");
+console.log("Generating brand icons with original geometric pawn...");
 
-const png32 = createPng(32, 32, chessIconPixel);
-
-// Wrap 32x32 PNG in standard ICO header
+// 1. Favicon.ico (32x32 standard ICO)
+const png32 = createPng(32, 32, faviconPixel);
 const icoHeader = Buffer.alloc(6 + 16);
 icoHeader.writeUInt16LE(0, 0); // reserved
 icoHeader.writeUInt16LE(1, 2); // icon type
 icoHeader.writeUInt16LE(1, 4); // 1 image
-// Directory entry
 icoHeader.writeUInt8(32, 6);   // width
 icoHeader.writeUInt8(32, 7);   // height
 icoHeader.writeUInt8(0, 8);    // colors
@@ -130,7 +162,25 @@ icoHeader.writeUInt16LE(1, 10); // color planes
 icoHeader.writeUInt16LE(32, 12); // bpp
 icoHeader.writeUInt32LE(png32.length, 14); // image size
 icoHeader.writeUInt32LE(22, 18); // offset
-
 const ico = Buffer.concat([icoHeader, png32]);
 writeFileSync("public/favicon.ico", ico);
-console.log("Created public/favicon.ico");
+console.log("✓ Created public/favicon.ico");
+
+// 2. Apple Touch Icon (180x180)
+const png180 = createPng(180, 180, (x, y, w, h) => appIconPixel(x, y, w, h, 0.85));
+writeFileSync("public/apple-touch-icon.png", png180);
+console.log("✓ Created public/apple-touch-icon.png (180x180)");
+
+// 3. PWA Icons (192, 512, maskable 512)
+const png192 = createPng(192, 192, (x, y, w, h) => appIconPixel(x, y, w, h, 0.82));
+writeFileSync("public/icon-192.png", png192);
+console.log("✓ Created public/icon-192.png");
+
+const png512 = createPng(512, 512, (x, y, w, h) => appIconPixel(x, y, w, h, 0.82));
+writeFileSync("public/icon-512.png", png512);
+console.log("✓ Created public/icon-512.png");
+
+// Maskable icon with 70% safe zone scaling
+const pngMaskable512 = createPng(512, 512, (x, y, w, h) => appIconPixel(x, y, w, h, 0.70));
+writeFileSync("public/icon-maskable-512.png", pngMaskable512);
+console.log("✓ Created public/icon-maskable-512.png (maskable safe zone)");

@@ -29,3 +29,19 @@
   - DevKit verification: PASSED (all 8 sections, theme switching, dialog modal, bottom sheet)
   - Contrast table: PASSED (recorded in `docs/DESIGN.md`)
 - **Next Up:** Merge `v2/foundation` into `main`, then start parallel tracks (Track B: Brand, Track C: Backend, Track D: Bots).
+
+## 2026-11-18 — Phase 2: Brand and Share Assets (Track B)
+- **Status:** COMPLETED
+- **Actions Completed:**
+  - Designed original geometric pawn mark (`public/logo-mark.svg`, `public/logo.svg`) with distinctive dual-tone emerald faceted split.
+  - Delivered vector brand exports: `logo-wordmark.svg`, `logo-mono.svg`, `safari-pinned-tab.svg`, and adaptive `favicon.svg` with dark/light `prefers-color-scheme` support.
+  - Generated crisp multi-resolution icons via `scripts/generate-icons.mjs` (`favicon.ico` 32x32, `apple-touch-icon.png` 180x180, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`).
+  - Added modern PWA web app manifest in `public/manifest.webmanifest`.
+  - Built reproducible OpenGraph share card generator `scripts/og/render.mjs`, producing `public/og-preview.png` (1200x630, 21.9 KB, well within the 300 KB WhatsApp limit).
+  - Deleted obsolete knight script (`scripts/generate-assets.mjs`).
+  - Added GPL-3.0 `LICENSE` file for full Stockfish compliance.
+- **Gates:**
+  - Build health: PASSED (`npm run typecheck && npm test && npm run build`)
+  - Image size: PASSED (`og-preview.png` is 21.9 KB < 300 KB)
+  - Icons and Manifest: PASSED
+- **Next Up:** Merge `v2/brand` into `main`, then proceed to Phase 3 (Backend, Rating & Profile Data).

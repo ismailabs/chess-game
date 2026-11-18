@@ -1,0 +1,40 @@
+{
+  "name": "Chess | Ismail Studio",
+  "short_name": "Chess",
+  "description": "Play real-time chess with friends, challenge bots at every level, and track your rating.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1d1c1a",
+  "theme_color": "#1d1c1a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Play Online",
+      "url": "/play",
+      "description": "Quick matchmaking with online players"
+    },
+    {
+      "name": "Play Bots",
+      "url": "/bots",
+      "description": "Spar against Stockfish bot personalities"
+    }
+  ]
+}

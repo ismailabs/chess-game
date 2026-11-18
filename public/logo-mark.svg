@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Original Geometric Pawn - Chess by Ismail Studio -->
+  <defs>
+    <clipPath id="leftHalf">
+      <path d="M 0 0 L 50 0 L 46 100 L 0 100 Z" />
+    </clipPath>
+    <clipPath id="rightHalf">
+      <path d="M 50 0 L 100 0 L 100 100 L 46 100 Z" />
+    </clipPath>
+    <linearGradient id="pawnGreenLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9bd05f" />
+      <stop offset="100%" stop-color="#81b64c" />
+    </linearGradient>
+    <linearGradient id="pawnGreenDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6ba038" />
+      <stop offset="100%" stop-color="#4d7a27" />
+    </linearGradient>
+  </defs>
+
+  <!-- Left Facet (Light Emerald) -->
+  <g clip-path="url(#leftHalf)">
+    <!-- Head -->
+    <circle cx="50" cy="26" r="17" fill="url(#pawnGreenLight)" />
+    <!-- Collar Ring -->
+    <path d="M 32 46 C 32 43.5 35 43 50 43 C 65 43 68 43.5 68 46 C 68 48.5 65 49 50 49 C 35 49 32 48.5 32 46 Z" fill="url(#pawnGreenLight)" />
+    <!-- Body -->
+    <path d="M 38 49 C 39 60 36 74 27 80 L 73 80 C 64 74 61 60 62 49 Z" fill="url(#pawnGreenLight)" />
+    <!-- Base Plate -->
+    <rect x="22" y="80" width="56" height="12" rx="4" fill="url(#pawnGreenLight)" />
+  </g>
+
+  <!-- Right Facet (Deep Emerald) -->
+  <g clip-path="url(#rightHalf)">
+    <!-- Head -->
+    <circle cx="50" cy="26" r="17" fill="url(#pawnGreenDark)" />
+    <!-- Collar Ring -->
+    <path d="M 32 46 C 32 43.5 35 43 50 43 C 65 43 68 43.5 68 46 C 68 48.5 65 49 50 49 C 35 49 32 48.5 32 46 Z" fill="url(#pawnGreenDark)" />
+    <!-- Body -->
+    <path d="M 38 49 C 39 60 36 74 27 80 L 73 80 C 64 74 61 60 62 49 Z" fill="url(#pawnGreenDark)" />
+    <!-- Base Plate -->
+    <rect x="22" y="80" width="56" height="12" rx="4" fill="url(#pawnGreenDark)" />
+  </g>
+
+  <!-- Subtle Specular Highlight on Head -->
+  <circle cx="45" cy="21" r="4.5" fill="white" opacity="0.25" />
+</svg>

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" fill="none">
+  <!-- Original Geometric Pawn Mark -->
+  <g transform="translate(6, 4) scale(0.52)">
+    <defs>
+      <clipPath id="wmLeft">
+        <path d="M 0 0 L 50 0 L 46 100 L 0 100 Z" />
+      </clipPath>
+      <clipPath id="wmRight">
+        <path d="M 50 0 L 100 0 L 100 100 L 46 100 Z" />
+      </clipPath>
+      <linearGradient id="wmGreenL" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#9bd05f" />
+        <stop offset="100%" stop-color="#81b64c" />
+      </linearGradient>
+      <linearGradient id="wmGreenD" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#6ba038" />
+        <stop offset="100%" stop-color="#4d7a27" />
+      </linearGradient>
+    </defs>
+
+    <g clip-path="url(#wmLeft)">
+      <circle cx="50" cy="26" r="17" fill="url(#wmGreenL)" />
+      <path d="M 32 46 C 32 43.5 35 43 50 43 C 65 43 68 43.5 68 46 C 68 48.5 65 49 50 49 C 35 49 32 48.5 32 46 Z" fill="url(#wmGreenL)" />
+      <path d="M 38 49 C 39 60 36 74 27 80 L 73 80 C 64 74 61 60 62 49 Z" fill="url(#wmGreenL)" />
+      <rect x="22" y="80" width="56" height="12" rx="4" fill="url(#wmGreenL)" />
+    </g>
+
+    <g clip-path="url(#wmRight)">
+      <circle cx="50" cy="26" r="17" fill="url(#wmGreenD)" />
+      <path d="M 32 46 C 32 43.5 35 43 50 43 C 65 43 68 43.5 68 46 C 68 48.5 65 49 50 49 C 35 49 32 48.5 32 46 Z" fill="url(#wmGreenD)" />
+      <path d="M 38 49 C 39 60 36 74 27 80 L 73 80 C 64 74 61 60 62 49 Z" fill="url(#wmGreenD)" />
+      <rect x="22" y="80" width="56" height="12" rx="4" fill="url(#wmGreenD)" />
+    </g>
+  </g>
+
+  <!-- Wordmark Text "Chess | Ismail Studio" -->
+  <text x="68" y="32" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="22" font-weight="800" fill="currentColor" letter-spacing="-0.03em">Chess</text>
+  <text x="142" y="31" font-family="'Inter', system-ui, sans-serif" font-size="11" font-weight="700" fill="#81b64c" letter-spacing="0.08em">ISMAIL STUDIO</text>
+</svg>
