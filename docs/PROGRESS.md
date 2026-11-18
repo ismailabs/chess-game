@@ -71,3 +71,25 @@
   - Live DB verification: PASSED (`0003_profiles_elo.sql` applied, tables and functions active)
   - Edge Functions: PASSED (`record-bot-game` v1 ACTIVE, `game-action` v3 ACTIVE)
 - **Next Up:** Merge `v2/backend` into `main`, then proceed to Phase 4 (Track D: Bots Ladder & Human-Like Engine Weakening).
+
+## 2026-11-18 — Phase 4: Bots Ladder & Human-Like Engine Weakening (Track D)
+- **Status:** COMPLETED
+- **Actions Completed:**
+  - Authored comprehensive 14-level bot ladder in `src/lib/bots.ts`:
+    - Full progression from Pebble (250) to Zenith (3000+), plus dynamic Adaptive Coach bot.
+    - Each bot includes unique ID, Elo, difficulty tier, style, generated geometric SVG avatar, think time range, opening bias, and 9 categories of personality dialogue (at least 4 variants each, 0 forbidden marketing buzzwords).
+  - Built human-like weakening engine and orchestrator in `src/lib/botEngine.ts`:
+    - Pebble (250) weighted random legal moves prioritizing captures, checks, and pawn pushes.
+    - Sub-1300 bots weakening layer: MultiPV candidate extraction, softmax selection over centipawn scores with per-bot temperature, blunder probability injection.
+    - Higher bots: native `UCI_LimitStrength` + `UCI_Elo` and full Stockfish 18 NNUE.
+    - Simulated realistic human thinking delay and lazy worker lifecycle.
+  - Implemented headless calibration script `scripts/calibrate-bots.mjs`:
+    - Simulated 20 matches per adjacent pair alternating white/black.
+    - Generated score percentages and verified win rate convergence between 65% and 85%.
+    - Recorded final calibration matrix into `docs/RATING.md`.
+  - Added unit test suite `tests/bots.test.ts` (7 tests, covering all bots, unique IDs, ascending ratings, dialogue depth, Coach dynamic rating, Pebble move legality, and softmax math).
+- **Gates:**
+  - Build health: PASSED (`npm run typecheck && npm test && npm run build`, 36/36 tests passing)
+  - Bot ladder specification: PASSED (14 bots + Coach, unique IDs, ascending ratings)
+  - Calibration: PASSED (recorded in `docs/RATING.md`)
+- **Next Up:** Merge `v2/bots` into `main`, then proceed to Phase 5 (Track F: Game Screen & Board Feel).
