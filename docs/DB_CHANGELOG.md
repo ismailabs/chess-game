@@ -24,30 +24,19 @@ All database schema migrations, RPC definitions, and Edge Function deployments m
 
 ---
 
-### 0003: Profiles Extension, Elo Rating & Bot Game Audit Log (Planned - Phase 3)
-- **Planned Version:** `0003_profiles_elo.sql`
-- **Target Schema Changes:**
-  1. Add columns to `public.profiles`:
-     - `bio text not null default ''`
-     - `description text not null default ''`
-     - `country text`
-     - `theme_pref text not null default 'system' check (theme_pref in ('system','light','dark'))`
-     - `rating int not null default 800 check (rating >= 100)`
-     - `peak_rating int not null default 800`
-     - `games_played int not null default 0`
-     - `wins int not null default 0`
-     - `draws int not null default 0`
-     - `losses int not null default 0`
-     - `username_changed_at timestamptz`
-  2. Create table `public.rating_history`:
-     - Tracks per-game Elo changes for online PvP and verified bot games.
-  3. Create table `public.bot_games`:
-     - Server-side verified bot games with PGN, result, reason, and rating application status.
-  4. Create RPC `apply_online_game_rating(game_id uuid)`:
-     - Atomic, idempotent calculation and application of pre-game ratings for both sides.
-  5. Create RPC `leaderboard(p_limit int default 100)`:
-     - Top players with at least 10 games played.
-  6. Add column `rating_applied_at timestamptz` to `public.games`.
+### 0003: Profiles Extension, Elo Rating & Bot Game Audit Log
+- **Date:** 2026-11-18
+- **Version:** `0003_profiles_elo.sql`
+- **Tables Modified / Added:**
+  - `public.profiles`: Extended with `bio`, `description`, `country`, `theme_pref`, `rating` (default 800), `peak_rating` (800), `games_played` (0), `wins` (0), `draws` (0), `losses` (0), `username_changed_at`.
+  - `public.rating_history`: Created with RLS and covering indexes on `(user_id, created_at desc)` and `(game_id)`.
+  - `public.bot_games`: Created with RLS and index on `(user_id, created_at desc)`.
+  - `public.games`: Added `rating_applied_at timestamptz`.
+- **Functions:**
+  - `public.protect_profile_rating()`: Trigger function preventing client-side forgery of stats.
+  - `public.apply_online_game_rating(uuid)`: Atomic Elo rating RPC with pre-game ratings, K-schedule (40/20/10), 400-point clamp, floor 100, and idempotent guards. Permission restricted to `service_role`.
+  - `public.leaderboard(int)`: Global leaderboard query for top rated players.
+- **Status:** APPLIED & VERIFIED on project `fhlpgtkftfhqcgppfnud`.
 
 #### Rollback SQL for 0003:
 ```sql
@@ -79,10 +68,11 @@ alter table public.profiles
 ## Edge Function Deployments
 
 ### `game-action`
-- **Current Version:** 2
+- **Current Version:** 3 (ACTIVE)
 - **JWT Verification:** Custom in-function via `auth.getUser(token)` (`verify_jwt: false`).
-- **Updates Planned (Phase 3):** Call `apply_online_game_rating` on checkmate, resignation, timeout, and draw agreements.
+- **Updates in v3:** Calls `apply_online_game_rating` on checkmate, flag timeout, resignation, and draw agreements/claims.
 
 ### `record-bot-game`
-- **Status:** NEW (Phase 3)
-- **Role:** Replays bot game PGN via `chess.js`, validates plies >= 10, verifies no hints were used, computes rating change with kScale 0.5, enforces daily +100 cap and 60 games/day max, and updates `profiles`, `bot_games`, and `rating_history` atomically using service role.
+- **Current Version:** 1 (ACTIVE)
+- **JWT Verification:** Custom in-function via `auth.getUser(token)` (`verify_jwt: false`).
+- **Role:** Replays bot game PGN via `chess.js`, validates plies >= 10, verifies no hints or takebacks were used, computes rating change with kScale 0.5, enforces daily +100 cap and 60 games/day max, and updates `profiles`, `bot_games`, and `rating_history` atomically using service role.

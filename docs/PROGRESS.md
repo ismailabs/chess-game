@@ -45,3 +45,29 @@
   - Image size: PASSED (`og-preview.png` is 21.9 KB < 300 KB)
   - Icons and Manifest: PASSED
 - **Next Up:** Merge `v2/brand` into `main`, then proceed to Phase 3 (Backend, Rating & Profile Data).
+
+## 2026-11-18 — Phase 3: Backend, Rating System & Database Architecture (Track C)
+- **Status:** COMPLETED
+- **Actions Completed:**
+  - Authored pure Elo rating module `src/lib/rating.ts` with 400-point clamp, K schedule (40/20/10), floor 100, anti-farming caps, and unit tests in `tests/rating.test.ts` (10/10 passing).
+  - Authored additive, idempotent migration `supabase/migrations/0003_profiles_elo.sql`:
+    - Extended `profiles` with `rating`, `peak_rating`, `games_played`, `wins`, `draws`, `losses`, `bio`, `description`, `country`, `theme_pref`, `username_changed_at`.
+    - Added tamper-proof trigger `protect_profile_rating` to prevent client-side stat forgery.
+    - Created `public.rating_history` with RLS and covering indexes for `(user_id, created_at desc)` and `(game_id)`.
+    - Created `public.bot_games` table with RLS and index on `(user_id, created_at desc)`.
+    - Created atomic `apply_online_game_rating(uuid)` RPC function restricted to `service_role`.
+    - Created `leaderboard(int)` RPC function.
+    - Successfully applied migration to Supabase production database `fhlpgtkftfhqcgppfnud`.
+  - Built and deployed `record-bot-game` Edge Function (version 1, ACTIVE):
+    - Replays PGN with `chess.js`, checks plies >= 10, ensures no hints or takebacks were used.
+    - Enforces 24-hour rolling anti-farming (+100 max positive gain, 60 games/day cap, +400 rating threshold clamp).
+    - Updates `profiles`, `bot_games`, and `rating_history` via service role.
+  - Updated and deployed `game-action` Edge Function (version 3, ACTIVE):
+    - Automatically invokes `apply_online_game_rating` on game finishes (checkmate, flag timeout, resignation, draw agreements).
+  - Generated TypeScript database definitions to `src/types/db.ts` via Supabase MCP.
+  - Ran security and performance advisors via Supabase MCP; added covering foreign key index and restricted execution privileges.
+- **Gates:**
+  - Build health: PASSED (`npm run typecheck && npm test && npm run build`)
+  - Live DB verification: PASSED (`0003_profiles_elo.sql` applied, tables and functions active)
+  - Edge Functions: PASSED (`record-bot-game` v1 ACTIVE, `game-action` v3 ACTIVE)
+- **Next Up:** Merge `v2/backend` into `main`, then proceed to Phase 4 (Track D: Bots Ladder & Human-Like Engine Weakening).

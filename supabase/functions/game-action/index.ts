@@ -110,6 +110,9 @@ async function doMove(user: any, b: Row): Promise<Row> {
     const out = timeoutOutcome(chess, mover);
     const row = await casUpdate(g, finishPatch(g, ucis, out, { [mover === "w" ? "white_ms" : "black_ms"]: 0 }));
     if (!row) throw new HttpError(409, "Position changed, reloading", "stale");
+    if (row.mode === "online" && row.status === "finished") {
+      await admin.rpc("apply_online_game_rating", { p_game_id: row.id }).catch((e: any) => console.error("Rating error:", e));
+    }
     return { game: row, flagged: true };
   }
   if (typeof b.uci !== "string" || !UCI_RE.test(b.uci)) throw new HttpError(400, "Malformed move");
@@ -131,11 +134,21 @@ async function doMove(user: any, b: Row): Promise<Row> {
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
   if (!row) throw new HttpError(409, "Position changed, reloading", "stale");
+  if (row.mode === "online" && row.status === "finished") {
+    await admin.rpc("apply_online_game_rating", { p_game_id: row.id }).catch((e: any) => console.error("Rating error:", e));
+  }
   return {
     game: row,
     move: { game_id: g.id, ply: g.ply + 1, player_id: asAi ? null : user.id, san: mv.san, uci, fen,
       white_ms: clk.white_ms, black_ms: clk.black_ms },
   };
+}
+
+async function finishAndRate(row: Row): Promise<Row> {
+  if (row && row.mode === "online" && row.status === "finished") {
+    await admin.rpc("apply_online_game_rating", { p_game_id: row.id }).catch((e: any) => console.error("Rating error:", e));
+  }
+  return row;
 }
 
 async function handle(user: any, b: Row): Promise<Row> {
@@ -194,42 +207,42 @@ async function handle(user: any, b: Row): Promise<Row> {
     }
     case "move": return await doMove(user, b);
     case "resign":
-      return { game: await mutate(b.gameId, user.id, async (g, me) =>
-        finishPatch(g, await ucisOf(g), { result: me === "w" ? "0-1" : "1-0", termination: "resignation" })) };
+      return { game: await finishAndRate(await mutate(b.gameId, user.id, async (g, me) =>
+        finishPatch(g, await ucisOf(g), { result: me === "w" ? "0-1" : "1-0", termination: "resignation" }))) };
     case "offer_draw":
-      return { game: await mutate(b.gameId, user.id, async (g) => {
+      return { game: await finishAndRate(await mutate(b.gameId, user.id, async (g) => {
         if (g.mode !== "online") throw new HttpError(400, "Draw offers are for online games");
         if (g.draw_offer_by && g.draw_offer_by !== user.id) {
           return finishPatch(g, await ucisOf(g), { result: "1/2-1/2", termination: "agreement" });
         }
         return { draw_offer_by: user.id };
-      }) };
+      })) };
     case "accept_draw":
-      return { game: await mutate(b.gameId, user.id, async (g) => {
+      return { game: await finishAndRate(await mutate(b.gameId, user.id, async (g) => {
         if (!g.draw_offer_by || g.draw_offer_by === user.id) throw new HttpError(409, "There is no draw offer to accept", "no_offer");
         return finishPatch(g, await ucisOf(g), { result: "1/2-1/2", termination: "agreement" });
-      }) };
+      })) };
     case "decline_draw":
       return { game: await mutate(b.gameId, user.id, (g) => {
         if (!g.draw_offer_by || g.draw_offer_by === user.id) throw new HttpError(409, "There is no draw offer to decline", "no_offer");
         return { draw_offer_by: null };
       }) };
     case "claim_draw":
-      return { game: await mutate(b.gameId, user.id, async (g) => {
+      return { game: await finishAndRate(await mutate(b.gameId, user.id, async (g) => {
         const ucis = await ucisOf(g);
         const { chess, keys } = replay(ucis);
         const claim = claimableDraw(chess, keys);
         if (!claim) throw new HttpError(409, "No draw can be claimed in this position", "not_claimable");
         return finishPatch(g, ucis, claim);
-      }) };
+      })) };
     case "timeout":
-      return { game: await mutate(b.gameId, user.id, async (g) => {
+      return { game: await finishAndRate(await mutate(b.gameId, user.id, async (g) => {
         const key = g.turn === "w" ? "white_ms" : "black_ms";
         const elapsed = g.ply >= 2 && g.turn_started_at ? Date.now() - Date.parse(g.turn_started_at) : 0;
         if (g.ply < 2 || g[key] - elapsed > 0) throw new HttpError(409, "The clock has not expired", "not_flagged");
         const ucis = await ucisOf(g);
         return finishPatch(g, ucis, timeoutOutcome(replay(ucis).chess, g.turn), { [key]: 0 });
-      }) };
+      })) };
     default:
       throw new HttpError(400, "Unknown action");
   }
